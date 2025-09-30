@@ -100,15 +100,12 @@ RULES:
 
 CRITICAL - Each metric MUST have:
 1. "name": The metric name (e.g., "Income", "Gross Profit")
-2. "value": The LATEST or MOST SIGNIFICANT value with $ and formatting (e.g., "$88,912" or "$10.9 days") - THIS IS MANDATORY
-3. "label": A descriptive label (e.g., "Latest Period (Feb 2021)" or "Current Value") - THIS IS MANDATORY
+2. "value": The LATEST or MOST SIGNIFICANT value with $ (e.g., "$88,912" or "$10.9 days")
+3. "label": A descriptive label (e.g., "Latest Period (Feb 2021)" or "Current Value")
 4. "chart_data": Array of ALL data points found
 5. "bullet_points": 3-5 key insights
 
-IMPORTANT: The "value" field MUST contain the most prominent number for display (usually the latest or peak value).
-IMPORTANT: The "label" field MUST describe what the value represents.
-
-Return complete JSON with ALL metrics and ALL their data points. DO NOT omit the "value" or "label" fields."""
+Return complete JSON with ALL metrics and ALL their data points."""
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -124,19 +121,12 @@ Return complete JSON with ALL metrics and ALL their data points. DO NOT omit the
             print(f"   Metrics count: {len(parsed_data.get('metrics', []))}")
             for metric in parsed_data.get('metrics', []):  # Show ALL metrics
                 chart_data = metric.get('chart_data', [])
-                value = metric.get('value', 'MISSING')
-                label = metric.get('label', 'MISSING')
-                print(f"   - {metric.get('name')}:")
-                print(f"     📊 Value: {value}")
-                print(f"     🏷️  Label: {label}")
-                print(f"     📈 Chart data: {len(chart_data)} data points")
+                print(f"   - {metric.get('name')}: {len(chart_data)} data points")
                 if chart_data:
                     for i, point in enumerate(chart_data[:3]):  # Show first 3 points
-                        print(f"       [{i+1}] {point.get('name')}: ${point.get('series1', 0):,}")
+                        print(f"     [{i+1}] {point.get('name')}: ${point.get('series1', 0):,}")
                 else:
                     print(f"     ⚠️  NO CHART DATA EXTRACTED!")
-                if value == 'MISSING' or not value:
-                    print(f"     ❌ WARNING: 'value' field is missing for {metric.get('name')}!")
             
             return parsed_data
         except Exception as e:
