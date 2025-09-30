@@ -6,6 +6,7 @@ import json
 from typing import List, Dict, Any
 from pathlib import Path
 from datetime import datetime
+import re
 
 from openai_service import OpenAIService
 from financial_models import FinancialReportData, TrendAnalysis, PeriodComparison
@@ -17,6 +18,39 @@ class FinancialTSXGenerator:
     def __init__(self):
         """Initialize the TSX generator."""
         self.openai_service = OpenAIService()
+    
+    def _parse_date(self, date_str: str) -> datetime:
+        """Parse date string to datetime for sorting."""
+        try:
+            # Try various date formats
+            formats = [
+                "%b %Y",      # "Jan 2021", "Dec 2020"
+                "%B %Y",      # "January 2021", "December 2020"
+                "%m/%Y",      # "01/2021"
+                "%Y-%m",      # "2021-01"
+            ]
+            for fmt in formats:
+                try:
+                    return datetime.strptime(date_str, fmt)
+                except ValueError:
+                    continue
+            # If no format matches, return a far future date so it goes to the end
+            return datetime(9999, 12, 31)
+        except:
+            return datetime(9999, 12, 31)
+    
+    def _sort_chart_data_chronologically(self, chart_data: List[Dict]) -> List[Dict]:
+        """Sort chart data by date chronologically."""
+        if not chart_data:
+            return chart_data
+        
+        # Sort by parsing the 'name' field as a date
+        try:
+            sorted_data = sorted(chart_data, key=lambda x: self._parse_date(x.get('name', '')))
+            return sorted_data
+        except Exception as e:
+            print(f"   ⚠️  Could not sort dates: {e}")
+            return chart_data
     
     def generate_financial_slides(
         self,
@@ -77,12 +111,14 @@ CRITICAL INSTRUCTIONS:
 1. Find EVERY metric mentioned (Income, Gross Profit, EBITDA, Cost of Sales, Customer Collection Days, etc.)
 2. For EACH metric, extract ALL values with their time periods
 3. Create separate chart_data arrays for each metric with ALL data points
+4. **SORT all chart_data arrays by date in CHRONOLOGICAL ORDER (oldest to newest)**
 
 EXAMPLE from text "Income $88,912 in Feb 2021 vs $84,629 in Jan 2021":
 - Income metric chart_data: [
     {{"name": "Jan 2021", "series1": 84629, "series2": 0, "series3": 0}},
     {{"name": "Feb 2021", "series1": 88912, "series2": 0, "series3": 0}}
   ]
+  NOTE: Jan 2021 comes BEFORE Feb 2021 (chronological order)
 
 EXAMPLE from text "Gross Profit $36,251 vs $40,371":
 - Gross Profit metric chart_data: [
@@ -97,15 +133,16 @@ RULES:
 - Remove $ and commas from numbers (convert to integers)
 - Create a separate metric entry for EACH different metric mentioned
 - chart_data arrays must NEVER be empty if numbers exist in text
+- **ALWAYS sort chart_data by date chronologically (May 2019, Dec 2020, Jan 2021, Feb 2021, Mar 2021, Apr 2021, etc.)**
 
 CRITICAL - Each metric MUST have:
 1. "name": The metric name (e.g., "Income", "Gross Profit")
 2. "value": The LATEST or MOST SIGNIFICANT value with $ (e.g., "$88,912" or "$10.9 days")
 3. "label": A descriptive label (e.g., "Latest Period (Feb 2021)" or "Current Value")
-4. "chart_data": Array of ALL data points found
+4. "chart_data": Array of ALL data points found, **SORTED CHRONOLOGICALLY**
 5. "bullet_points": 3-5 key insights
 
-Return complete JSON with ALL metrics and ALL their data points."""
+Return complete JSON with ALL metrics and ALL their data points in chronological order."""
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -115,6 +152,16 @@ Return complete JSON with ALL metrics and ALL their data points."""
         try:
             response = self.openai_service.generate_completion(messages)
             parsed_data = json.loads(response)
+            
+            # Sort chart_data chronologically for each metric
+            for metric in parsed_data.get('metrics', []):
+                if 'chart_data' in metric and metric['chart_data']:
+                    original_data = metric['chart_data'].copy()
+                    metric['chart_data'] = self._sort_chart_data_chronologically(metric['chart_data'])
+                    
+                    # Check if sorting changed the order
+                    if original_data != metric['chart_data']:
+                        print(f"   📅 Sorted {metric.get('name')} data chronologically")
             
             # Debug: Print what AI extracted
             print(f"\n🤖 AI Extracted Data:")
