@@ -241,28 +241,22 @@ async def generate_presentation(request: FinancialDataRequest):
         if not os.path.exists(pdf_output):
             raise HTTPException(status_code=500, detail="PDF file not created")
         
-        # Return PDF directly instead of saving to static
-        # This is faster and doesn't require a second request
+        # Save PDF to static directory for serving
+        static_dir = Path("static")
+        static_dir.mkdir(exist_ok=True)
         
-        # Read the PDF file
-        with open(pdf_output, 'rb') as f:
-            pdf_content = f.read()
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        final_pdf = static_dir / f"presentation_{timestamp}.pdf"
+        
+        shutil.copy(pdf_output, str(final_pdf))
         
         # Clean up temp directory
         shutil.rmtree(temp_dir, ignore_errors=True)
         
-        # Return PDF directly as response
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"financial_report_{timestamp}.pdf"
-        
-        from fastapi.responses import Response
-        return Response(
-            content=pdf_content,
-            media_type="application/pdf",
-            headers={
-                "Content-Disposition": f"attachment; filename={filename}",
-                "Content-Length": str(len(pdf_content))
-            }
+        return GeneratePDFResponse(
+            message="PDF generated successfully",
+            pdf_url=f"/download/{final_pdf.name}",
+            slides_count=len(sorted_files)
         )
         
     except Exception as e:
