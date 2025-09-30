@@ -39,11 +39,15 @@ RUN playwright install-deps chromium
 # Copy application files
 COPY . .
 
+# Copy and make startup script executable
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
 # Create static directory
 RUN mkdir -p static
 
 # Expose port
 EXPOSE 8000
 
-# Run the application (Railway will set PORT env var)
-CMD ["sh", "-c", "uvicorn api:app --host 0.0.0.0 --port ${PORT:-8000}"]
+# Run the application using startup script
+CMD ["/app/start.sh"]
