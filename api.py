@@ -277,7 +277,11 @@ async def download_pdf(filename: str):
     return FileResponse(
         path=str(file_path),
         media_type="application/pdf",
-        filename=filename
+        filename=filename,
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}",
+            "Cache-Control": "no-cache"
+        }
     )
 
 
