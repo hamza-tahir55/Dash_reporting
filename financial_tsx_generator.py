@@ -98,6 +98,13 @@ RULES:
 - Create a separate metric entry for EACH different metric mentioned
 - chart_data arrays must NEVER be empty if numbers exist in text
 
+CRITICAL - Each metric MUST have:
+1. "name": The metric name (e.g., "Income", "Gross Profit")
+2. "value": The LATEST or MOST SIGNIFICANT value with $ (e.g., "$88,912" or "$10.9 days")
+3. "label": A descriptive label (e.g., "Latest Period (Feb 2021)" or "Current Value")
+4. "chart_data": Array of ALL data points found
+5. "bullet_points": 3-5 key insights
+
 Return complete JSON with ALL metrics and ALL their data points."""
 
         messages = [
