@@ -45,5 +45,5 @@ RUN mkdir -p static
 # Expose port
 EXPOSE 8000
 
-# Run the application
-CMD uvicorn api:app --host 0.0.0.0 --port ${PORT:-8000}
+# Run the application (Railway will set PORT env var)
+CMD ["sh", "-c", "uvicorn api:app --host 0.0.0.0 --port ${PORT:-8000}"]
