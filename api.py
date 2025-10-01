@@ -212,8 +212,7 @@ async def generate_presentation(request: FinancialDataRequest):
                     data['phone'] = request.contact_phone
                     data['email'] = request.contact_email
                     data['website'] = request.contact_website
-                    # Always use current date if not provided
-                    data['date'] = request.presentation_date if request.presentation_date else datetime.now().strftime("%B %Y")
+                    data['date'] = request.presentation_date or datetime.now().strftime("%B %Y")
                     html = generate_title_html(data)
                 elif data['type'] == 'comparison':
                     html = generate_comparison_html_with_real_charts(data)
