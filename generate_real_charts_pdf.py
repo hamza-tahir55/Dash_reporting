@@ -171,10 +171,10 @@ body{{margin:0;width:1280px;height:720px;overflow:hidden}}
   <div class="absolute bottom-0 left-0 right-0 px-16 py-6 bg-black bg-opacity-20 backdrop-blur-sm">
     <div class="flex justify-between text-blue-100 text-sm">
       <div class="flex space-x-12">
-        <div><span class="opacity-70">Email:</span> <span class="font-semibold">contact@financial-analysis.com</span></div>
-        <div><span class="opacity-70">Web:</span> <span class="font-semibold">www.financial-analysis.com</span></div>
+        <div><span class="opacity-70">Email:</span> <span class="font-semibold">contact@DashAnalytix.com</span></div>
+        <div><span class="opacity-70">Web:</span> <span class="font-semibold">www.app.dashanalytix.com</span></div>
       </div>
-      <div class="font-semibold">Confidential</div>
+      <div class="font-semibold">Organization 1</div>
     </div>
   </div>
 </div>
