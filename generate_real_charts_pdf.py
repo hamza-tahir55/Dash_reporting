@@ -4,6 +4,7 @@ Uses Chart.js for proper data visualization.
 """
 from playwright.sync_api import sync_playwright
 from pathlib import Path
+from datetime import datetime
 import json
 import re
 
@@ -108,7 +109,16 @@ def parse_tsx_with_data(file_path):
 
 
 def generate_title_html(data):
-    """Generate modern title slide with brand colors."""
+    """Generate modern title slide with brand colors using data from frontend."""
+    # Extract data with fallbacks
+    org_name = data.get('org', 'Financial Analysis')
+    title = data.get('title', 'Financial Analysis Report')
+    subtitle = data.get('subtitle', 'Comprehensive Financial Overview')
+    email = data.get('email', 'contact@DashAnalytix.com')
+    website = data.get('website', 'www.app.DashAnalytix.com')
+    phone = data.get('phone', '+1-234-567-8900')
+    date = data.get('date', datetime.now().strftime("%B %Y"))
+    
     return f"""<!DOCTYPE html>
 <html><head><meta charset="UTF-8">
 <script src="https://cdn.tailwindcss.com"></script>
@@ -130,7 +140,7 @@ body{{margin:0;width:1280px;height:720px;overflow:hidden}}
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
         </svg>
       </div>
-      <span class="text-2xl font-bold text-white">Financial Analysis</span>
+      <span class="text-2xl font-bold text-white">{org_name}</span>
     </div>
   </div>
   
@@ -141,12 +151,12 @@ body{{margin:0;width:1280px;height:720px;overflow:hidden}}
         <span class="text-blue-300 font-semibold text-sm tracking-wider">FINANCIAL REPORT</span>
       </div>
       <h1 class="text-6xl font-black text-white leading-tight mb-6 tracking-tight">
-        {data['title']}
+        {title}
       </h1>
       <div class="flex items-center space-x-4 mb-8">
         <div class="w-1 h-12 bg-gradient-to-b from-blue-400 to-cyan-400"></div>
         <h2 class="text-2xl font-semibold text-blue-100">
-          {data['subtitle']}
+          {subtitle}
         </h2>
       </div>
       <div class="flex items-center space-x-8 text-blue-200">
@@ -154,13 +164,13 @@ body{{margin:0;width:1280px;height:720px;overflow:hidden}}
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
           </svg>
-          <span class="font-medium">September 2024</span>
+          <span class="font-medium">{date}</span>
         </div>
         <div class="flex items-center space-x-2">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
           </svg>
-          <span class="font-medium">Professional Analysis</span>
+          <span class="font-medium">{phone}</span>
         </div>
       </div>
     </div>
@@ -170,8 +180,8 @@ body{{margin:0;width:1280px;height:720px;overflow:hidden}}
   <div class="absolute bottom-0 left-0 right-0 px-16 py-6 bg-black bg-opacity-20 backdrop-blur-sm">
     <div class="flex justify-between text-blue-100 text-sm">
       <div class="flex space-x-12">
-        <div><span class="opacity-70">Email:</span> <span class="font-semibold">contact@financial-analysis.com</span></div>
-        <div><span class="opacity-70">Web:</span> <span class="font-semibold">www.financial-analysis.com</span></div>
+        <div><span class="opacity-70">Email:</span> <span class="font-semibold">{email}</span></div>
+        <div><span class="opacity-70">Web:</span> <span class="font-semibold">{website}</span></div>
       </div>
       <div class="font-semibold">Confidential</div>
     </div>
