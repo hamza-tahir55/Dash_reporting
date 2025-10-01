@@ -150,6 +150,22 @@ async def generate_presentation(request: FinancialDataRequest):
             output_dir=output_dir
         )
         
+        # DEBUG: Print what AI extracted
+        print(f"\n{'='*60}")
+        print(f"🔍 DEBUG: AI EXTRACTION RESULTS")
+        print(f"{'='*60}")
+        print(f"Metrics extracted: {len(parsed_data.get('metrics', []))}")
+        print(f"Comparisons: {'YES' if parsed_data.get('comparisons') else 'NO'}")
+        if parsed_data.get('metrics'):
+            print(f"\nMetric names:")
+            for i, m in enumerate(parsed_data.get('metrics', []), 1):
+                print(f"  {i}. {m.get('name', 'UNNAMED')}")
+        else:
+            print(f"\n⚠️  WARNING: NO METRICS EXTRACTED!")
+            print(f"   This means the AI could not parse your financial_text.")
+            print(f"   Check if financial_text is being sent correctly.")
+        print(f"{'='*60}\n")
+        
         # Generate actual TSX files from parsed data
         from pathlib import Path as PathLib
         output_path = PathLib(output_dir)
