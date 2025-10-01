@@ -23,20 +23,25 @@ def parse_tsx_with_data(file_path):
         'chart_data': []
     }
     
-    # Extract text fields
+    # Extract text fields - improved parsing
     for i, line in enumerate(lines):
-        if '.default("' in line:
-            match = re.search(r'\.default\("([^"]*)"\)', line)
+        if '.default("' in line or '.default(\'' in line:
+            # Handle both double and single quotes
+            match = re.search(r'\.default\(["\']([^"\']*)["\']', line)
             if match:
                 value = match.group(1)
                 if 'sectionTitle' in line or 'primaryTitle' in line:
                     data['title'] = value
+                    print(f"   📊 Extracted title: {value}")
                 elif 'sectionSubtitle' in line or 'secondaryTitle' in line:
                     data['subtitle'] = value
+                    print(f"   📊 Extracted subtitle: {value}")
                 elif 'statisticValue' in line:
                     data['value'] = value
+                    print(f"   💰 Extracted value: {value}")
                 elif 'statisticLabel' in line:
                     data['label'] = value
+                    print(f"   🏷️  Extracted label: {value}")
         
         # Extract bullet points
         if 'bulletPoints' in line and '.default([' in line:
