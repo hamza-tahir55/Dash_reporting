@@ -209,12 +209,12 @@ export const Schema = z.object({{
   }}),
   contactDetails: z.object({{
     phoneNumber: z.string().default("+1-234-567-8900"),
-    physicalAddress: z.string().default("West London, UK"),
-    websiteUrl: z.string().default("www.app.DashAnalytix.com")
+    physicalAddress: z.string().default("123 Finance St, Business City, ST 12345"),
+    websiteUrl: z.string().default("www.financial-analysis.com")
   }}).default({{
     phoneNumber: "+1-234-567-8900",
-    physicalAddress: "West London, UK",
-    websiteUrl: "www.app.DashAnalytix.com"
+    physicalAddress: "123 Finance St, Business City, ST 12345",
+    websiteUrl: "www.financial-analysis.com"
   }}),
   presentationDate: z.string().default("{data.get('date', datetime.now().strftime('%B %Y'))}"),
   showDecorations: z.boolean().default(true),
