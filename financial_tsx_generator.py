@@ -1,3 +1,4 @@
+@ -1,658 +1,658 @@
 """
 Generate professional TSX slide components for financial reports.
 Uses the professional slide template format.
