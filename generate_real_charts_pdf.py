@@ -1,4 +1,4 @@
-@ -1,738 +1,748 @@
+
 """
 Generate PDF with REAL charts using actual financial data.
 Uses Chart.js for proper data visualization.
