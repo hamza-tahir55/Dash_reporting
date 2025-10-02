@@ -191,6 +191,113 @@ Return complete JSON with ALL metrics and ALL their data points in chronological
             "comparisons": None
         }
     
+    def _generate_title_slide(self, data: Dict[str, Any], output_path: Path) -> str:
+        """Generate TitleSlide.tsx component."""
+        tsx_content = f'''import * as z from "zod";
+import {{ ImageSchema }} from "../defaultSchemes";
+
+export const layoutName = "Financial Report Title";
+export const layoutId = "financial-title-slide";
+export const layoutDescription = "Title slide for financial analysis report";
+
+export const Schema = z.object({{
+  organizationName: z.string().default("Financial Analysis"),
+  primaryTitle: z.string().default("{data.get('title', 'FINANCIAL REPORT')}"),
+  secondaryTitle: z.string().default("{data.get('subtitle', 'COMPREHENSIVE ANALYSIS')}"),
+  brandLogo: ImageSchema.default({{
+    __image_url__: "https://via.placeholder.com/40x40/14B8A6/FFFFFF?text=FA",
+    __image_prompt__: "Financial analytics logo with chart symbol"
+  }}),
+  contactDetails: z.object({{
+    phoneNumber: z.string().default("+1-234-567-8900"),
+    physicalAddress: z.string().default("West London, UK"),
+    websiteUrl: z.string().default("www.app.DashAnalytix.com")
+  }}).default({{
+    phoneNumber: "+1-234-567-8900",
+    physicalAddress: "West London, UK",
+    websiteUrl: "www.app.DashAnalytix.com"
+  }}),
+  presentationDate: z.string().default("{data.get('date', datetime.now().strftime('%B %Y'))}"),
+  showDecorations: z.boolean().default(true),
+  showNavigationArrow: z.boolean().default(true),
+}});
+
+type SchemaType = z.infer<typeof Schema>;
+
+const FinancialTitleSlide = ({{ data }}: {{ data: Partial<SchemaType> }}) => {{
+  const {{
+    organizationName,
+    primaryTitle,
+    secondaryTitle,
+    brandLogo,
+    contactDetails,
+    presentationDate,
+    showDecorations,
+    showNavigationArrow,
+  }} = data;
+
+  return (
+    <div className="aspect-video max-w-[1280px] w-full bg-white relative overflow-hidden">
+      <div className="absolute top-0 left-0 right-0 px-16 py-8 flex justify-between items-center z-20">
+        <div className="flex items-center space-x-3">
+          {{brandLogo?.__image_url__ && (
+            <div className="w-10 h-10">
+              <img src={{brandLogo.__image_url__}} alt={{brandLogo.__image_prompt__}} className="w-full h-full object-contain" />
+            </div>
+          )}}
+          {{organizationName && <span className="text-2xl font-bold text-gray-900">{{organizationName}}</span>}}
+        </div>
+        {{showNavigationArrow && (
+          <div className="w-12 h-12 bg-teal-600 rounded-full flex items-center justify-center">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={{2}} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        )}}
+      </div>
+
+      {{showDecorations && <div className="absolute top-20 right-16 w-96 h-96 bg-yellow-100 rounded-full opacity-60 z-10"></div>}}
+
+      <div className="relative h-full flex flex-col justify-center px-16">
+        <div>
+          {{primaryTitle && <h1 className="text-4xl lg:text-5xl font-black text-teal-700 leading-none tracking-tight mb-4">{{primaryTitle}}</h1>}}
+          {{secondaryTitle && (
+            <div className="flex items-center space-x-4 mb-12">
+              <div className="w-4 h-4 bg-teal-600 rounded-full"></div>
+              <h2 className="text-xl font-bold text-gray-800 tracking-wide">{{secondaryTitle}}</h2>
+            </div>
+          )}}
+        </div>
+      </div>
+
+      <div className="absolute bottom-0 left-0 right-0 px-16 py-8 border-t-2 border-gray-300">
+        <div className="flex justify-between items-center text-gray-700">
+          <div className="flex space-x-16 text-sm">
+            {{contactDetails?.phoneNumber && (
+              <div><div className="font-semibold text-gray-900 mb-1">Telephone</div><div>{{contactDetails.phoneNumber}}</div></div>
+            )}}
+            {{contactDetails?.physicalAddress && (
+              <div><div className="font-semibold text-gray-900 mb-1">Address</div><div>{{contactDetails.physicalAddress}}</div></div>
+            )}}
+            {{contactDetails?.websiteUrl && (
+              <div><div className="font-semibold text-gray-900 mb-1">Website</div><div>{{contactDetails.websiteUrl}}</div></div>
+            )}}
+          </div>
+          {{presentationDate && <div className="text-right"><div className="text-lg font-bold text-gray-900">{{presentationDate}}</div></div>}}
+        </div>
+      </div>
+    </div>
+  );
+}};
+
+export default FinancialTitleSlide;
+'''
+        
+        file_path = output_path / "FinancialTitleSlide.tsx"
+        file_path.write_text(tsx_content)
+        print(f"  ✓ Created: {file_path}")
+        return str(file_path)
+    
     def _generate_statistic_slide(self, metric: Dict[str, Any], output_path: Path) -> str:
         """Generate StatisticSlide.tsx for a metric."""
         metric_name = metric.get("name", "Metric")
@@ -199,26 +306,6 @@ Return complete JSON with ALL metrics and ALL their data points in chronological
         # Format chart data
         chart_data_str = json.dumps(metric.get("chart_data", []), indent=6)
         bullet_points_str = json.dumps(metric.get("bullet_points", []), indent=6)
-        # Prepare KPI strings from computed kpis
-        k = metric.get("kpis") or {}
-        vs = (k or {}).get("vs_previous") or None
-        yoy = (k or {}).get("yoy") or None
-        prev_label = (k or {}).get("previous_label") or ""
-        latest_label = (k or {}).get("latest_label") or ""
-        kpi_prev_percent = ""
-        kpi_prev_label = ""
-        if vs is not None and isinstance(vs, dict) and vs.get("pct") is not None:
-            sign = "+" if vs.get("pct", 0) >= 0 else ""
-            kpi_prev_percent = f"{sign}{vs.get('pct')}%"
-            # If we have labels, include them, else a generic label
-            if prev_label and latest_label:
-                # Use MoM labeling instead of generic vs previous
-                kpi_prev_label = f"MoM ({prev_label} → {latest_label})"
-            else:
-                kpi_prev_label = "MoM"
-        # Disable YoY display as requested – keep fields empty so UI won't render
-        kpi_yoy_percent = ""
-        kpi_yoy_label = ""
         
         tsx_content = f'''import React from "react";
 import * as z from "zod";
@@ -235,11 +322,6 @@ export const Schema = z.object({{
   sectionSubtitle: z.string().default("FINANCIAL PERFORMANCE ANALYSIS"),
   statisticValue: z.string().default("{metric.get('value', 'N/A')}"),
   statisticLabel: z.string().default("{metric.get('label', metric_name)}"),
-  // KPI fields (populated from computed time-series)
-  kpiPrevPercent: z.string().default("{kpi_prev_percent}"),
-  kpiPrevLabel: z.string().default("{kpi_prev_label}"),
-  kpiYoyPercent: z.string().default("{kpi_yoy_percent}"),
-  kpiYoyLabel: z.string().default("{kpi_yoy_label}"),
   supportingVisual: ImageSchema.default({{
     __image_url__: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
     __image_prompt__: "Financial analytics dashboard with charts and data"
@@ -485,6 +567,7 @@ export default FinancialComparisonSlide;
         file_path.write_text(tsx_content)
         print(f"  ✓ Created: {file_path}")
         return str(file_path)
+
 
 def main():
     """Main entry point."""
