@@ -89,6 +89,7 @@ Return ONLY valid JSON with this structure:
             "bullet_points": [
                 "Income reached its highest point in December 2020 at $155,815, representing a significant peak in revenue generation during this period.",
                 "The average income across the analyzed timeframe is approximately $15,000, indicating substantial volatility around this baseline figure.",
+                "Income increased from $84,629 in Jan 2021 to $30,912 in Feb 2021, primarily driven by invoices from Customer A and the addition of new Customer B as key contributing factors.",
                 "A concerning downward trend emerged recently, with income declining from $9,384 in August 2024 to $5,200 in September 2024, representing a 44.6% month-over-month decrease."
             ],
             "chart_data": [
@@ -119,6 +120,7 @@ CRITICAL INSTRUCTIONS:
 2. For EACH metric, extract ALL values with their time periods
 3. Create separate chart_data arrays for each metric with ALL data points
 4. **SORT all chart_data arrays by date in CHRONOLOGICAL ORDER (oldest to newest)**
+5. **EXTRACT ROOT CAUSES**: Include any explanations, reasons, or contextual factors mentioned in the text (e.g., "due to Customer A invoices", "because of new customer acquisition", "margin pressure", etc.)
 
 EXAMPLE from text "Income $88,912 in Feb 2021 vs $84,629 in Jan 2021":
 - Income metric chart_data: [
@@ -153,13 +155,15 @@ CRITICAL - Each metric MUST have:
    - "previous_label": "Jan 2021" (or period name)
    - "latest_label": "Feb 2021" (or period name)
    Example: "kpis": {{"vs_previous": {{"pct": -63.5, "from": 84629, "to": 30912}}, "previous_label": "Jan 2021", "latest_label": "Feb 2021"}}
-6. "bullet_points": 3-5 descriptive insights that provide context and analysis. Each bullet point should be 1-2 complete sentences explaining trends, comparisons, or key findings with specific numbers, timeframes, and percentages. Include analytical context such as:
+6. "bullet_points": 3-5 descriptive insights that provide context and analysis. Each bullet point should be 1-2 complete sentences explaining trends, comparisons, or key findings with specific numbers, timeframes, and percentages. **CRITICALLY IMPORTANT**: Include any root causes, explanations, or contextual reasons mentioned in the original text. Include analytical context such as:
    - Peak/lowest values with dates and amounts
    - Percentage changes between periods  
    - Trend direction (increasing/decreasing/volatile)
    - Comparison to averages or benchmarks
    - Business implications of the changes
-   Example: "Revenue peaked in December 2020 at $155,815, representing a 1,800% increase from the May 2019 baseline of $8,321, indicating exceptional growth during this period."
+   - **ROOT CAUSES**: Any explanations provided (e.g., "due to Customer A invoices", "because of new customer acquisition", "margin pressure", "profitability hit")
+   - **CONTEXTUAL FACTORS**: Customer concentration, operational changes, market conditions mentioned
+   Example: "Income increased from $84,629 in Jan 2021 to $30,912 in Feb 2021, representing a -63.5% decline, primarily due to invoices from Customer A and the addition of new Customer B as mentioned in the analysis."
 
 Return complete JSON with ALL metrics and ALL their data points in chronological order."""
 
