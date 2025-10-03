@@ -65,7 +65,7 @@ class FinancialTSXGenerator:
             financial_text: Raw financial analysis text
             output_dir: Directory to save generated slides
         Returns:
-            Parsed financial data in JSON format
+            List of generated TSX file paths
         """
         system_prompt = """You are a financial data analyst. Parse the financial text and extract structured data for TSX slide generation.
 
@@ -141,7 +141,7 @@ CRITICAL - Each metric MUST have:
 2. "value": The LATEST or MOST SIGNIFICANT value with $ (e.g., "$88,912" or "$10.9 days")
 3. "label": A descriptive label (e.g., "Latest Period (Feb 2021)" or "Current Value")
 4. "chart_data": Array of ALL data points found, **SORTED CHRONOLOGICALLY**
-5. "bullet_points": 3-5 key insights
+5. "bullet_points": 3-5 descriptive insights that provide context and analysis. Each bullet point should be 1-2 sentences explaining trends, comparisons, or key findings with specific numbers and timeframes. Avoid simple one-liners - provide analytical context.
 
 Return complete JSON with ALL metrics and ALL their data points in chronological order."""
 
@@ -176,10 +176,32 @@ Return complete JSON with ALL metrics and ALL their data points in chronological
                 else:
                     print(f"     ⚠️  NO CHART DATA EXTRACTED!")
             
-            return parsed_data
+            # Generate actual slide files
+            print(f"\n📝 Generating TSX Slides...")
+            output_path = Path(output_dir)
+            output_path.mkdir(exist_ok=True)
+            
+            generated_files = []
+            
+            # 1. Generate title slide
+            title_file = self._generate_title_slide(parsed_data, output_path)
+            generated_files.append(title_file)
+            
+            # 2. Generate statistic slides for each metric
+            for metric in parsed_data.get('metrics', []):
+                if metric.get('chart_data'):  # Only generate if there's data
+                    stat_file = self._generate_statistic_slide(metric, output_path)
+                    generated_files.append(stat_file)
+            
+            # 3. Generate comparison slide if comparisons exist
+            if parsed_data.get('comparisons') and parsed_data['comparisons'].get('bar_chart_data'):
+                comparison_file = self._generate_dual_chart_slide(parsed_data, output_path)
+                generated_files.append(comparison_file)
+            
+            return generated_files
         except Exception as e:
             print(f"⚠️  Error parsing data: {e}")
-            return self._create_default_structure(financial_text)
+            return []
     
     def _create_default_structure(self, financial_text: str) -> Dict[str, Any]:
         """Create default structure if AI parsing fails."""
