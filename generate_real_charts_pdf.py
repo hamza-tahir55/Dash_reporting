@@ -743,21 +743,42 @@ def generate_statistic_html_with_real_chart(data):
 
 
 def generate_comparison_html_with_real_charts(data):
-    """Generate comparison slide with REAL bar charts from TSX data."""
-    # Extract comparison data from TSX chart_data
-    # Format: chart_data should have metrics with series1 and series2 for two periods
-    comparison_data = {
-        'metrics': [],
-        'period1': [],
-        'period2': []
-    }
+    """Generate premium comparison dashboard slide with comprehensive financial overview."""
+    # Extract comparison data from TSX chart_data for all metrics
+    financial_metrics = []
+    operational_metrics = []
+    period1_values = []
+    period2_values = []
+    period1_label = "Previous Period"
+    period2_label = "Current Period"
     
     if data.get('chart_data') and len(data['chart_data']) > 0:
         for point in data['chart_data']:
-            comparison_data['metrics'].append(point.get('name', 'Metric'))
-            comparison_data['period1'].append(point.get('series1', 0))
-            comparison_data['period2'].append(point.get('series2', 0))
-        print(f"   ✅ Using {len(comparison_data['metrics'])} metrics from TSX for comparison")
+            metric_name = point.get('name', 'Metric')
+            series1 = point.get('series1', 0)
+            series2 = point.get('series2', 0)
+            
+            # Categorize metrics for different sections
+            if any(keyword in metric_name.lower() for keyword in ['income', 'revenue', 'profit', 'ebitda', 'expense', 'cost']):
+                financial_metrics.append(metric_name)
+                period1_values.append(series1)
+                period2_values.append(series2)
+            elif any(keyword in metric_name.lower() for keyword in ['collection', 'payment', 'inventory', 'days']):
+                operational_metrics.append({
+                    'name': metric_name,
+                    'period1': series1,
+                    'period2': series2,
+                    'change': series2 - series1,
+                    'change_pct': ((series2 - series1) / series1 * 100) if series1 != 0 else 0
+                })
+        
+        # Extract period labels from first data point if available
+        if len(data['chart_data']) > 0:
+            first_point = data['chart_data'][0]
+            period1_label = first_point.get('period1_label', period1_label)
+            period2_label = first_point.get('period2_label', period2_label)
+        
+        print(f"   ✅ Dashboard: {len(financial_metrics)} financial + {len(operational_metrics)} operational metrics")
     else:
         # No data - show message
         comparison_data = {
@@ -767,80 +788,243 @@ def generate_comparison_html_with_real_charts(data):
         }
         print(f"   ⚠️  NO COMPARISON DATA FOUND")
     
+    # Generate financial metric cards with percentage changes
+    financial_cards_html = ""
+    if len(financial_metrics) >= 1:  # Generate cards if we have any financial metrics
+        cards_to_show = min(5, len(financial_metrics))  # Show up to 5 cards
+        for i in range(cards_to_show):
+            metric = financial_metrics[i]
+            p1_val = period1_values[i]
+            p2_val = period2_values[i]
+            change_pct = ((p2_val - p1_val) / p1_val * 100) if p1_val != 0 else 0
+            sign = "+" if change_pct >= 0 else ""
+            color = "blue" if "income" in metric.lower() or "revenue" in metric.lower() else "cyan" if "profit" in metric.lower() else "indigo" if "ebitda" in metric.lower() else "orange" if "expense" in metric.lower() else "blue"
+            
+            financial_cards_html += f'''
+        <div class="metric-card glass-card rounded-xl p-3 shadow-md text-center border-l-4 border-{color}-600">
+          <div class="text-2xl font-black text-{color}-600">{sign}{change_pct:.1f}%</div>
+          <div class="text-xs font-semibold text-gray-600 mt-1">{metric[:8]}</div>
+        </div>'''
+        
+        # Fill remaining slots with placeholder cards if we have fewer than 5
+        while len(financial_cards_html.split('<div class="metric-card')) - 1 < 5:
+            financial_cards_html += '''
+        <div class="metric-card glass-card rounded-xl p-3 shadow-md text-center border-l-4 border-gray-300">
+          <div class="text-2xl font-black text-gray-400">--</div>
+          <div class="text-xs font-semibold text-gray-400 mt-1">N/A</div>
+        </div>'''
+    
+    # Generate operational metric cards
+    operational_cards_html = ""
+    if operational_metrics:
+        for i, metric in enumerate(operational_metrics[:3]):
+            change = metric['change']
+            change_pct = metric['change_pct']
+            sign = "+" if change >= 0 else ""
+            bg_color = "red" if change > 0 else "green"
+            arrow_direction = "up" if change > 0 else "down"
+            
+            operational_cards_html += f'''
+        <div class="glass-card rounded-xl p-3 shadow-md border-l-4 border-blue-600 hover:shadow-lg transition-all duration-300">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-xs font-semibold text-gray-500 mb-0.5">{metric['name']}</div>
+              <div class="flex items-baseline space-x-2">
+                <span class="text-2xl font-black text-blue-600">{metric['period1']:.0f}</span>
+                <span class="text-sm font-bold text-gray-400">→ {metric['period2']:.0f}</span>
+                <span class="text-xs px-2 py-0.5 bg-{bg_color}-100 text-{bg_color}-700 rounded-full font-bold">{sign}{change:.0f}</span>
+              </div>
+            </div>
+            <svg class="w-8 h-8 text-{"green" if change < 0 else "red"}-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 {"7h8m0 0v8m0-8l-8 8-4-4-6 6" if change < 0 else "17h8m0 0V9m0 8l-8-8-4 4-6-6"}"/>
+            </svg>
+          </div>
+        </div>'''
+    else:
+        # Add placeholder operational cards if no operational data
+        for i in range(3):
+            operational_cards_html += '''
+        <div class="glass-card rounded-xl p-3 shadow-md border-l-4 border-gray-300 hover:shadow-lg transition-all duration-300">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-xs font-semibold text-gray-400 mb-0.5">No Data</div>
+              <div class="flex items-baseline space-x-2">
+                <span class="text-2xl font-black text-gray-400">--</span>
+                <span class="text-sm font-bold text-gray-400">→ --</span>
+                <span class="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full font-bold">N/A</span>
+              </div>
+            </div>
+            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"/>
+            </svg>
+          </div>
+        </div>'''
+    
+    # Prepare chart data as JSON
+    financial_data_json = {
+        'metrics': financial_metrics[:5],
+        'period1': period1_values[:5],
+        'period2': period2_values[:5]
+    }
+    
+    # Prepare operational line chart data
+    operational_line_data = []
+    for metric in operational_metrics[:3]:
+        operational_line_data.append({
+            'label': metric['name'],
+            'data': [metric['period1'], metric['period2']]
+        })
+    
     return f"""<!DOCTYPE html>
-<html><head><meta charset="UTF-8">
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<style>
-body{{margin:0;width:1280px;height:720px;overflow:hidden}}
-.gradient-header{{background:linear-gradient(135deg,#061551 0%,#0e68b3 100%)}}
-canvas{{image-rendering:-webkit-optimize-contrast;image-rendering:crisp-edges}}
-</style>
-</head><body>
-<div class="w-[1280px] h-[720px] bg-white">
-  <div class="h-24 gradient-header px-16 py-4 flex justify-between items-center shadow-lg">
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        * {{ font-family: 'Inter', sans-serif; }}
+        body {{ margin:0; width:1280px; height:720px; overflow:hidden; background:#000 }}
+        .gradient-header {{ 
+            background:linear-gradient(135deg,#0a1628 0%,#1e3a8a 50%,#1e40af 100%);
+            position:relative;
+            overflow:hidden;
+        }}
+        .gradient-header::before {{
+            content:'';
+            position:absolute;
+            top:-50%;
+            right:-50%;
+            width:100%;
+            height:100%;
+            background:radial-gradient(circle,rgba(96,165,250,0.15) 0%,transparent 70%);
+            animation:float 8s ease-in-out infinite;
+        }}
+        .gradient-header::after {{
+            content:'';
+            position:absolute;
+            bottom:-30%;
+            left:-30%;
+            width:80%;
+            height:80%;
+            background:radial-gradient(circle,rgba(147,197,253,0.1) 0%,transparent 60%);
+            animation:float 6s ease-in-out infinite reverse;
+        }}
+        @keyframes float {{
+            0%, 100% {{ transform:translate(0,0) scale(1); }}
+            50% {{ transform:translate(-20px,20px) scale(1.1); }}
+        }}
+        @keyframes pulse-glow {{
+            0%, 100% {{ opacity:1; box-shadow:0 0 20px rgba(96,165,250,0.6); }}
+            50% {{ opacity:0.7; box-shadow:0 0 30px rgba(96,165,250,0.9); }}
+        }}
+        @keyframes slideIn {{
+            from {{ opacity:0; transform:translateY(20px); }}
+            to {{ opacity:1; transform:translateY(0); }}
+        }}
+        .animate-slide-in {{ animation:slideIn 0.6s ease-out forwards; }}
+        .delay-1 {{ animation-delay:0.1s; opacity:0; }}
+        .delay-2 {{ animation-delay:0.2s; opacity:0; }}
+        .delay-3 {{ animation-delay:0.3s; opacity:0; }}
+        .delay-4 {{ animation-delay:0.4s; opacity:0; }}
+        .glass-card {{
+            background:rgba(255,255,255,0.95);
+            backdrop-filter:blur(10px);
+            border:1px solid rgba(255,255,255,0.3);
+            box-shadow:0 8px 32px rgba(0,0,0,0.08);
+        }}
+        .stat-card {{
+            background:linear-gradient(135deg,rgba(255,255,255,0.1) 0%,rgba(255,255,255,0.05) 100%);
+            backdrop-filter:blur(10px);
+            border:1px solid rgba(255,255,255,0.2);
+            transition:all 0.3s ease;
+        }}
+        .stat-card:hover {{
+            background:linear-gradient(135deg,rgba(255,255,255,0.15) 0%,rgba(255,255,255,0.08) 100%);
+            transform:translateY(-2px);
+            box-shadow:0 8px 24px rgba(0,0,0,0.2);
+        }}
+        canvas {{ image-rendering:-webkit-optimize-contrast; image-rendering:crisp-edges }}
+        .metric-card {{
+            transition:all 0.3s ease;
+        }}
+        .metric-card:hover {{
+            transform:translateY(-2px);
+            box-shadow:0 8px 24px rgba(0,0,0,0.1);
+        }}
+    </style>
+</head>
+<body>
+<div class="w-[1280px] h-[720px] bg-white relative">
+  <div class="h-24 gradient-header px-12 py-6 flex justify-between items-center shadow-2xl relative z-10">
     <div>
-      <div class="inline-block px-4 py-1 bg-white bg-opacity-20 rounded-full mb-2">
-        <span class="text-blue-200 font-semibold text-xs tracking-wider">COMPARATIVE ANALYSIS</span>
+      <div class="inline-block px-4 py-1.5 bg-blue-400 bg-opacity-20 rounded-full mb-2 border border-blue-300 border-opacity-30">
+        <span class="text-blue-100 font-bold text-xs tracking-widest">COMPARATIVE ANALYSIS</span>
       </div>
-      <h1 class="text-3xl font-black text-white">Period Comparison</h1>
+      <h1 class="text-3xl font-black text-white">Business Health Dashboard</h1>
     </div>
     <div class="flex items-center space-x-3">
-      <div class="w-10 h-10 bg-white bg-opacity-20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+      <div class="w-11 h-11 bg-white bg-opacity-20 backdrop-blur-sm rounded-xl flex items-center justify-center">
         <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
         </svg>
       </div>
       <span class="text-lg font-bold text-white">Financial Analysis</span>
     </div>
+    <div class="absolute top-6 right-20 w-4 h-4 bg-cyan-400 rounded-full" style="animation:pulse-glow 2s ease-in-out infinite"></div>
+    <div class="absolute bottom-6 left-32 w-3 h-3 bg-blue-400 rounded-full opacity-60"></div>
   </div>
+
   <div class="flex h-[calc(100%-96px)]">
-    <div class="w-1/2 p-8 bg-gray-50">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-bold" style="color:#061551">Monthly Comparison</h3>
-        <div class="flex space-x-3">
-          <div class="flex items-center space-x-2 px-3 py-1 bg-white rounded-full shadow-sm">
-            <div class="w-3 h-3 rounded-full" style="background:#0e68b3"></div>
-            <span class="text-xs font-semibold text-gray-700">Aug 2024</span>
+    <!-- LEFT SIDE: FINANCIAL PERFORMANCE -->
+    <div class="w-[55%] p-8 bg-gradient-to-br from-gray-50 to-blue-50 animate-slide-in">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <div class="inline-block px-3 py-1.5 glass-card rounded-lg mb-2 shadow-md">
+            <span class="text-xs font-bold tracking-wide text-blue-600">FINANCIAL METRICS</span>
           </div>
-          <div class="flex items-center space-x-2 px-3 py-1 bg-white rounded-full shadow-sm">
-            <div class="w-3 h-3 rounded-full" style="background:#32bbd8"></div>
-            <span class="text-xs font-semibold text-gray-700">Sep 2024</span>
+          <h3 class="text-xl font-black text-gray-800">Performance Summary</h3>
+        </div>
+        <div class="flex space-x-2">
+          <div class="flex items-center space-x-2 px-4 py-2 glass-card rounded-xl shadow-md">
+            <div class="w-3 h-3 rounded-full bg-gradient-to-r from-blue-500 to-blue-600"></div>
+            <span class="text-xs font-bold text-gray-700">{period1_label}</span>
+          </div>
+          <div class="flex items-center space-x-2 px-4 py-2 glass-card rounded-xl shadow-md">
+            <div class="w-3 h-3 rounded-full bg-gradient-to-r from-cyan-400 to-cyan-500"></div>
+            <span class="text-xs font-bold text-gray-700">{period2_label}</span>
           </div>
         </div>
       </div>
-      <div class="h-64 bg-white rounded-xl shadow-sm p-4 mb-3">
+      <div class="h-[340px] glass-card rounded-2xl shadow-lg p-5 mb-4 animate-slide-in delay-1">
         <canvas id="barChart"></canvas>
       </div>
-      <div class="flex gap-3">
-        <div class="flex-1 h-32 bg-white rounded-xl shadow-sm p-3">
-          <canvas id="donutChart"></canvas>
-        </div>
-        <div class="flex-1">
-          <h3 class="text-sm font-bold mb-2" style="color:#061551">Key Insights</h3>
-          <p class="text-xs text-gray-600 leading-relaxed">Significant declines across all metrics. Income -44.6%, Gross Profit -45.6%, EBITDA -53.1%.</p>
-        </div>
+      <div class="grid grid-cols-5 gap-2 animate-slide-in delay-2">
+        {financial_cards_html}
       </div>
     </div>
-    <div class="w-1/2 p-8 bg-white">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-bold" style="color:#061551">Historical Trend</h3>
-        <div class="flex items-center space-x-2 px-3 py-1 bg-gray-50 rounded-full">
-          <div class="w-3 h-3 rounded-full" style="background:#0e68b3"></div>
-          <span class="text-xs font-semibold text-gray-700">Income Trend</span>
+
+    <!-- RIGHT SIDE: OPERATIONAL EFFICIENCY -->
+    <div class="w-[45%] p-6 bg-white animate-slide-in delay-1">
+      <div class="mb-4">
+        <div class="inline-block px-3 py-1.5 rounded-lg mb-2 shadow-md bg-gradient-to-r from-cyan-500 to-blue-600">
+          <span class="text-xs font-bold tracking-wide text-white">OPERATIONAL EFFICIENCY</span>
         </div>
+        <h3 class="text-xl font-black text-gray-800">Working Capital</h3>
       </div>
-      <div class="h-56 bg-gray-50 rounded-xl shadow-sm p-4 mb-3">
-        <canvas id="areaChart"></canvas>
+
+      <div class="h-[170px] glass-card rounded-2xl shadow-lg p-4 mb-3 animate-slide-in delay-2">
+        <canvas id="lineChart"></canvas>
       </div>
-      <div class="mt-4">
-        <h3 class="text-base font-bold mb-2" style="color:#061551">Performance Overview</h3>
-        <p class="text-sm text-gray-600 leading-relaxed">Historical financial performance from May 2019 to Sep 2024, showing peak in Dec 2020 at $155,815 followed by sharp decline. Recent months show stabilization at lower levels.</p>
+
+      <div class="space-y-2.5 animate-slide-in delay-3">
+        {operational_cards_html}
       </div>
     </div>
   </div>
-  <div class="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-blue-600"></div>
+  <div class="absolute bottom-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-cyan-400 to-blue-600"></div>
 </div>
+
 <script>
 // Wait for Chart.js to load
 window.addEventListener('load', function() {{
@@ -849,9 +1033,174 @@ window.addEventListener('load', function() {{
 Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
 Chart.defaults.plugins.legend.labels.usePointStyle = true;
 
-// Bar Chart
+// Financial metrics data from extracted TSX
+const financial_data = {json.dumps(financial_data_json)};
+
+// Bar Chart - Financial Performance
 const barCtx = document.getElementById('barChart').getContext('2d');
 new Chart(barCtx, {{
+  type: 'bar',
+  data: {{
+    labels: financial_data['metrics'],
+    datasets: [
+      {{
+        label: '{period1_label}',
+        data: financial_data['period1'],
+        backgroundColor: function(context) {{
+          const chart = context.chart;
+          const {{ctx, chartArea}} = chart;
+          if (!chartArea) return '#2563eb';
+          const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+          gradient.addColorStop(0, '#3b82f6');
+          gradient.addColorStop(1, '#2563eb');
+          return gradient;
+        }},
+        borderColor: '#1e40af',
+        borderWidth: 0,
+        borderRadius: 8,
+        barThickness: 32
+      }},
+      {{
+        label: '{period2_label}',
+        data: financial_data['period2'],
+        backgroundColor: function(context) {{
+          const chart = context.chart;
+          const {{ctx, chartArea}} = chart;
+          if (!chartArea) return '#06b6d4';
+          const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+          gradient.addColorStop(0, '#22d3ee');
+          gradient.addColorStop(1, '#06b6d4');
+          return gradient;
+        }},
+        borderColor: '#0891b2',
+        borderWidth: 0,
+        borderRadius: 8,
+        barThickness: 32
+      }}
+    ]
+  }},
+  options: {{
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {{
+      legend: {{
+        display: false
+      }},
+      tooltip: {{
+        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+        padding: 14,
+        titleFont: {{ size: 14, weight: 'bold' }},
+        bodyFont: {{ size: 13 }},
+        cornerRadius: 8,
+        displayColors: true,
+        usePointStyle: true,
+        callbacks: {{
+          label: function(context) {{
+            return context.dataset.label + ': $' + context.parsed.y.toLocaleString();
+          }}
+        }}
+      }}
+    }},
+    scales: {{
+      y: {{
+        beginAtZero: true,
+        grid: {{
+          color: 'rgba(0, 0, 0, 0.04)',
+          lineWidth: 1
+        }},
+        ticks: {{
+          callback: function(value) {{ return '$' + (value/1000) + 'K'; }},
+          font: {{ size: 12, weight: '600' }},
+          color: '#64748b'
+        }},
+        border: {{ display: false }}
+      }},
+      x: {{
+        grid: {{ display: false }},
+        ticks: {{ 
+          font: {{ size: 12, weight: '600' }},
+          color: '#64748b'
+        }},
+        border: {{ display: false }}
+      }}
+    }}
+  }}
+}});
+
+// Line Chart - Operational Efficiency Trends
+const lineCtx = document.getElementById('lineChart').getContext('2d');
+const operationalData = {json.dumps([{{
+    'labels': [period1_label, period2_label],
+    'datasets': [{{
+        'label': metric['name'],
+        'data': [metric['period1'], metric['period2']],
+        'borderColor': ['#2563eb', '#06b6d4', '#8b5cf6'][i % 3],
+        'backgroundColor': f"rgba({{'37, 99, 235' if i == 0 else '6, 182, 212' if i == 1 else '139, 92, 246'}}, 0.1)"
+    }} for i, metric in enumerate(operational_metrics[:3])]
+}} if operational_metrics else {{'labels': [], 'datasets': []}})};
+
+new Chart(lineCtx, {{
+  type: 'line',
+  data: operationalData,
+  options: {{
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {{
+      legend: {{
+        display: true,
+        position: 'bottom',
+        labels: {{ 
+          font: {{ size: 11, weight: 'bold' }},
+          padding: 12,
+          usePointStyle: true,
+          pointStyle: 'circle'
+        }}
+      }},
+      tooltip: {{
+        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+        padding: 14,
+        titleFont: {{ size: 13, weight: 'bold' }},
+        bodyFont: {{ size: 12 }},
+        cornerRadius: 8,
+        displayColors: true,
+        usePointStyle: true,
+        callbacks: {{
+          label: function(context) {{
+            return context.dataset.label + ': ' + context.parsed.y + ' days';
+          }}
+        }}
+      }}
+    }},
+    scales: {{
+      y: {{
+        beginAtZero: true,
+        grid: {{
+          color: 'rgba(0, 0, 0, 0.04)',
+          lineWidth: 1
+        }},
+        ticks: {{
+          callback: function(value) {{ return value + ' days'; }},
+          font: {{ size: 11, weight: '600' }},
+          color: '#64748b'
+        }},
+        border: {{ display: false }}
+      }},
+      x: {{
+        grid: {{ display: false }},
+        ticks: {{ 
+          font: {{ size: 11, weight: '600' }},
+          color: '#64748b'
+        }},
+        border: {{ display: false }}
+      }}
+    }}
+  }}
+}});
+
+  }}, 500);
+}});
+</script>
+</body></html>"""
   type: 'bar',
   data: {{
     labels: {json.dumps(comparison_data['metrics'])},

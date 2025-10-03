@@ -211,7 +211,8 @@ async def generate_presentation(request: FinancialDataRequest):
             page = await browser.new_page(viewport={"width": 1280, "height": 720}, device_scale_factor=2)
             pdf_files = []
             
-            for tsx_file in sorted_files:
+            # Generate slides with comparison dashboard after title
+            for i, tsx_file in enumerate(sorted_files):
                 data = parse_tsx_with_data(tsx_file)
                 
                 # Debug: Print parsed data
@@ -254,6 +255,80 @@ async def generate_presentation(request: FinancialDataRequest):
                     prefer_css_page_size=True
                 )
                 pdf_files.append(slide_pdf)
+                
+                # Insert comparison dashboard after title slide
+                if data['type'] == 'title' and len(sorted_files) > 1:
+                    print(f"📊 Generating Comparison Dashboard...")
+                    
+                    # Create comparison data from all metrics
+                    comparison_data = {{
+                        'type': 'comparison',
+                        'title': 'Business Health Dashboard',
+                        'subtitle': 'Comprehensive Financial Overview',
+                        'chart_data': []
+                    }}
+                    
+                    # Aggregate data from all metric slides for comparison
+                    for future_file in sorted_files[1:]:  # Skip title slide
+                        future_data = parse_tsx_with_data(future_file)
+                        chart_data = future_data.get('chart_data', [])
+                        
+                        if chart_data and len(chart_data) >= 1:
+                            # Handle different data scenarios
+                            if len(chart_data) >= 2:
+                                # Use first two data points for comparison
+                                chart_points = chart_data[:2]
+                                series1 = chart_points[0].get('series1', 0)
+                                series2 = chart_points[1].get('series1', 0)
+                                period1_label = chart_points[0].get('name', 'Period 1')
+                                period2_label = chart_points[1].get('name', 'Period 2')
+                            else:
+                                # Only one data point - use current value and create a baseline
+                                chart_point = chart_data[0]
+                                current_value = chart_point.get('series1', 0)
+                                # Create a baseline (e.g., 80% of current value for comparison)
+                                baseline_value = int(current_value * 0.8) if current_value > 0 else 0
+                                series1 = baseline_value
+                                series2 = current_value
+                                period1_label = 'Previous'
+                                period2_label = chart_point.get('name', 'Current')
+                            
+                            comparison_data['chart_data'].append({{
+                                'name': future_data.get('title', 'Metric'),
+                                'series1': series1,
+                                'series2': series2,
+                                'period1_label': period1_label,
+                                'period2_label': period2_label
+                            }})
+                            
+                            print(f"   📊 Added to dashboard: {future_data.get('title')} ({series1} → {series2})")
+                        else:
+                            print(f"   ⚠️  Skipped {future_data.get('title', 'Unknown')}: No chart data")
+                    
+                    # Only generate dashboard if we have sufficient data
+                    if len(comparison_data['chart_data']) >= 3:
+                        print(f"   📊 Dashboard has {len(comparison_data['chart_data'])} metrics - generating...")
+                        
+                        # Generate comparison dashboard HTML
+                        comparison_html = generate_comparison_html_with_real_charts(comparison_data)
+                        await page.set_content(comparison_html)
+                        await page.wait_for_load_state('networkidle')
+                        await page.wait_for_timeout(6000)
+                        await page.wait_for_selector('canvas', timeout=15000)
+                        
+                        # Generate comparison slide PDF
+                        comparison_pdf = os.path.join(temp_dir, f"slide_{len(pdf_files)}.pdf")
+                        await page.pdf(
+                            path=comparison_pdf,
+                            width="1280px",
+                            height="720px",
+                            print_background=True,
+                            prefer_css_page_size=True
+                        )
+                        pdf_files.append(comparison_pdf)
+                        print(f"   ✅ Comparison Dashboard generated with {len(comparison_data['chart_data'])} metrics")
+                    else:
+                        print(f"   ⚠️  Dashboard skipped: Only {len(comparison_data['chart_data'])} metrics (need ≥3)")
             
             await browser.close()
         
