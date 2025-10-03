@@ -7,7 +7,7 @@ from playwright.sync_api import sync_playwright
 from pathlib import Path
 import json
 import re
-
+import base64
 
 def parse_tsx_with_data(file_path):
     """Parse TSX file and extract ALL data including chart data."""
@@ -23,6 +23,18 @@ def parse_tsx_with_data(file_path):
         'bullets': [],
         'chart_data': []
     }
+
+def get_logo_base64():
+    """Convert logo to base64 for embedding in HTML."""
+    logo_path = Path("assets/logo.png")
+    if logo_path.exists():
+        with open(logo_path, "rb") as f:
+            logo_data = base64.b64encode(f.read()).decode()
+            return f"data:image/png;base64,{logo_data}"
+    # Fallback to online URL if local file doesn't exist
+    return "https://dashanalytix.com/wp-content/uploads/2023/11/logo-color.png"
+
+
     
     # Extract text fields
     for i, line in enumerate(lines):
