@@ -81,9 +81,9 @@ Return ONLY valid JSON with this structure:
             "label": "Peak Revenue (Dec 2020)",
             "description": "Income shows significant volatility...",
             "bullet_points": [
-                "Peaked in December 2020 at $155,815",
-                "Average income approximately $15,000",
-                "Recent decline from $9,384 to $5,200"
+                "Income reached its highest point in December 2020 at $155,815, representing a significant peak in revenue generation during this period.",
+                "The average income across the analyzed timeframe is approximately $15,000, indicating substantial volatility around this baseline figure.",
+                "A concerning downward trend emerged recently, with income declining from $9,384 in August 2024 to $5,200 in September 2024, representing a 44.6% month-over-month decrease."
             ],
             "chart_data": [
                 {"name": "May 2019", "series1": 8321, "series2": 0, "series3": 0},
@@ -141,7 +141,13 @@ CRITICAL - Each metric MUST have:
 2. "value": The LATEST or MOST SIGNIFICANT value with $ (e.g., "$88,912" or "$10.9 days")
 3. "label": A descriptive label (e.g., "Latest Period (Feb 2021)" or "Current Value")
 4. "chart_data": Array of ALL data points found, **SORTED CHRONOLOGICALLY**
-5. "bullet_points": 3-5 descriptive insights that provide context and analysis. Each bullet point should be 1-2 sentences explaining trends, comparisons, or key findings with specific numbers and timeframes. Avoid simple one-liners - provide analytical context.
+5. "bullet_points": 3-5 descriptive insights that provide context and analysis. Each bullet point should be 1-2 complete sentences explaining trends, comparisons, or key findings with specific numbers, timeframes, and percentages. Include analytical context such as:
+   - Peak/lowest values with dates and amounts
+   - Percentage changes between periods  
+   - Trend direction (increasing/decreasing/volatile)
+   - Comparison to averages or benchmarks
+   - Business implications of the changes
+   Example: "Revenue peaked in December 2020 at $155,815, representing a 1,800% increase from the May 2019 baseline of $8,321, indicating exceptional growth during this period."
 
 Return complete JSON with ALL metrics and ALL their data points in chronological order."""
 
@@ -152,6 +158,24 @@ Return complete JSON with ALL metrics and ALL their data points in chronological
         
         try:
             response = self.openai_service.generate_completion(messages)
+            
+            # Debug: Print raw response to diagnose parsing issues
+            print(f"\n🔍 Raw AI Response (first 200 chars): {response[:200]}...")
+            
+            # Clean the response - sometimes AI adds extra text
+            response = response.strip()
+            if response.startswith('```json'):
+                response = response[7:]
+            if response.endswith('```'):
+                response = response[:-3]
+            response = response.strip()
+            
+            # Try to find JSON in the response
+            json_start = response.find('{')
+            json_end = response.rfind('}') + 1
+            if json_start != -1 and json_end > json_start:
+                response = response[json_start:json_end]
+            
             parsed_data = json.loads(response)
             
             # Sort chart_data chronologically for each metric
@@ -177,8 +201,13 @@ Return complete JSON with ALL metrics and ALL their data points in chronological
                     print(f"     ⚠️  NO CHART DATA EXTRACTED!")
             
             return parsed_data
+        except json.JSONDecodeError as e:
+            print(f"⚠️  JSON parsing error: {e}")
+            print(f"⚠️  Problematic response: {response[:500]}...")
+            return self._create_default_structure(financial_text)
         except Exception as e:
-            print(f"⚠️  Error parsing data: {e}")
+            print(f"⚠️  Error generating data: {e}")
+            print(f"⚠️  Response received: {response if 'response' in locals() else 'No response received'}")
             return self._create_default_structure(financial_text)
     
     def _create_default_structure(self, financial_text: str) -> Dict[str, Any]:
