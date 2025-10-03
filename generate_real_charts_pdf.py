@@ -283,14 +283,35 @@ body {{
 
 
 def generate_statistic_html_with_real_chart(data):
-    """Generate modern statistic slide with brand colors and REAL Chart.js chart."""
+    """Generate premium statistic slide with enhanced visuals and REAL Chart.js chart."""
+    # Generate bullet points with enhanced styling
     bullets_html = ''.join([
-        f'''<div class="flex items-start space-x-3 mb-3">
-          <div class="w-2 h-2 {["bg-blue-500", "bg-cyan-400", "bg-blue-300"][i % 3]} rounded-full flex-shrink-0 mt-2"></div>
-          <p class="text-sm leading-relaxed text-gray-700">{bullet}</p>
-        </div>'''
-        for i, bullet in enumerate(data['bullets'][:4])
+        f'''<div class="flex items-start bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-300 group">
+                <div class="flex-shrink-0 w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
+                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+                <span class="text-xs font-semibold text-gray-700 pt-0.5">{bullet}</span>
+            </div>'''
+        for bullet in data['bullets'][:4]
     ])
+    
+    # Build KPI cards from parsed KPI fields, if available
+    kpi_cards = []
+    if data.get('kpi_yoy_percent'):
+        kpi_cards.append(f'''
+                <div class="stat-card rounded-xl p-3">
+                    <div class="text-2xl font-black text-white mb-1">{data['kpi_yoy_percent']}</div>
+                    <div class="text-xs font-semibold text-blue-200 uppercase tracking-wide">{data.get('kpi_yoy_label', 'YoY')}</div>
+                </div>''')
+    if data.get('kpi_prev_percent'):
+        kpi_cards.append(f'''
+                <div class="stat-card rounded-xl p-3">
+                    <div class="text-2xl font-black text-white mb-1">{data['kpi_prev_percent']}</div>
+                    <div class="text-xs font-semibold text-blue-200 uppercase tracking-wide">{data.get('kpi_prev_label', 'vs Previous')}</div>
+                </div>''')
+    kpi_cards_html = ('\n'.join(kpi_cards)) if kpi_cards else ''
     
     # Use ONLY actual data from TSX - NO FALLBACKS, NO HARDCODED DATA
     if data['chart_data'] and len(data['chart_data']) > 0:
