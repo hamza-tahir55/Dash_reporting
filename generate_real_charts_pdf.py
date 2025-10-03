@@ -309,21 +309,31 @@ def generate_statistic_html_with_real_chart(data):
         for bullet in data['bullets'][:4]
     ])
     
-    # Build KPI cards from parsed KPI fields, if available
+    # Build KPI cards from parsed KPI fields - ONLY show ONE relevant comparison
     kpi_cards = []
-    if data.get('kpi_yoy_percent'):
-        kpi_cards.append(f'''
-                <div class="stat-card rounded-xl p-3">
-                    <div class="text-2xl font-black text-white mb-1">{data['kpi_yoy_percent']}</div>
-                    <div class="text-xs font-semibold text-blue-200 uppercase tracking-wide">{data.get('kpi_yoy_label', 'YoY')}</div>
-                </div>''')
+    print(f"   🔍 KPI Data Check: prev='{data.get('kpi_prev_percent')}', yoy='{data.get('kpi_yoy_percent')}'")
+    
+    # Prioritize the main comparison (usually MoM/QoQ) over YoY - show only ONE card
     if data.get('kpi_prev_percent'):
         kpi_cards.append(f'''
                 <div class="stat-card rounded-xl p-3">
                     <div class="text-2xl font-black text-white mb-1">{data['kpi_prev_percent']}</div>
                     <div class="text-xs font-semibold text-blue-200 uppercase tracking-wide">{data.get('kpi_prev_label', 'vs Previous')}</div>
                 </div>''')
+        print(f"   ✅ Added Primary KPI card: {data['kpi_prev_percent']} ({data.get('kpi_prev_label')})")
+    elif data.get('kpi_yoy_percent'):
+        # Only show YoY if no primary comparison exists
+        kpi_cards.append(f'''
+                <div class="stat-card rounded-xl p-3">
+                    <div class="text-2xl font-black text-white mb-1">{data['kpi_yoy_percent']}</div>
+                    <div class="text-xs font-semibold text-blue-200 uppercase tracking-wide">{data.get('kpi_yoy_label', 'YoY')}</div>
+                </div>''')
+        print(f"   ✅ Added YoY KPI card: {data['kpi_yoy_percent']} ({data.get('kpi_yoy_label')})")
+    
     kpi_cards_html = ('\n'.join(kpi_cards)) if kpi_cards else ''
+    
+    if not kpi_cards_html:
+        print(f"   ⚠️  NO KPI CARDS generated - no KPI data found")
     
     # Use ONLY actual data from TSX - NO FALLBACKS, NO HARDCODED DATA
     if data['chart_data'] and len(data['chart_data']) > 0:
@@ -440,7 +450,7 @@ def generate_statistic_html_with_real_chart(data):
             </div>
 
 
-            {f'<div class="grid grid-cols-2 gap-3 mb-6 animate-slide-in delay-4">{kpi_cards_html}</div>' if kpi_cards_html else ''}
+            {f'<div class="mb-6 animate-slide-in delay-4">{kpi_cards_html}</div>' if kpi_cards_html else ''}
             
             <div class="animate-slide-in delay-4">
                 <div class="w-full h-32 stat-card rounded-2xl p-3 shadow-2xl">
