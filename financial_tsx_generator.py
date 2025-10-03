@@ -65,7 +65,7 @@ class FinancialTSXGenerator:
             financial_text: Raw financial analysis text
             output_dir: Directory to save generated slides
         Returns:
-            List of generated TSX file paths
+            Parsed financial data in JSON format
         """
         system_prompt = """You are a financial data analyst. Parse the financial text and extract structured data for TSX slide generation.
 
@@ -176,32 +176,10 @@ Return complete JSON with ALL metrics and ALL their data points in chronological
                 else:
                     print(f"     ⚠️  NO CHART DATA EXTRACTED!")
             
-            # Generate actual slide files
-            print(f"\n📝 Generating TSX Slides...")
-            output_path = Path(output_dir)
-            output_path.mkdir(exist_ok=True)
-            
-            generated_files = []
-            
-            # 1. Generate title slide
-            title_file = self._generate_title_slide(parsed_data, output_path)
-            generated_files.append(title_file)
-            
-            # 2. Generate statistic slides for each metric
-            for metric in parsed_data.get('metrics', []):
-                if metric.get('chart_data'):  # Only generate if there's data
-                    stat_file = self._generate_statistic_slide(metric, output_path)
-                    generated_files.append(stat_file)
-            
-            # 3. Generate comparison slide if comparisons exist
-            if parsed_data.get('comparisons') and parsed_data['comparisons'].get('bar_chart_data'):
-                comparison_file = self._generate_dual_chart_slide(parsed_data, output_path)
-                generated_files.append(comparison_file)
-            
-            return generated_files
+            return parsed_data
         except Exception as e:
             print(f"⚠️  Error parsing data: {e}")
-            return []
+            return self._create_default_structure(financial_text)
     
     def _create_default_structure(self, financial_text: str) -> Dict[str, Any]:
         """Create default structure if AI parsing fails."""
