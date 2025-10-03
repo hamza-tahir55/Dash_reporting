@@ -340,197 +340,395 @@ def generate_statistic_html_with_real_chart(data):
         print(f"   ⚠️  NO DATA FOUND - AI did not extract chart data for {data.get('title', 'this metric')}")
     
     return f"""<!DOCTYPE html>
-<html><head><meta charset="UTF-8">
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<style>
-body{{margin:0;width:1280px;height:720px;overflow:hidden}}
-.gradient-left{{background:linear-gradient(135deg,#061551 0%,#0e68b3 100%)}}
-canvas{{image-rendering:-webkit-optimize-contrast;image-rendering:crisp-edges}}
-</style>
-</head><body>
-<div class="w-[1280px] h-[720px] bg-white flex relative">
-  <div class="w-1/2 gradient-left px-16 py-12 text-white relative">
-    <div class="inline-block px-4 py-1 bg-blue-400 bg-opacity-20 rounded-full mb-4">
-      <span class="text-blue-200 font-semibold text-xs tracking-wider">METRIC ANALYSIS</span>
-    </div>
-    <h1 class="text-4xl font-black mb-3">{data['title']}</h1>
-    <p class="text-sm font-medium mb-3 text-blue-100">{data['subtitle']}</p>
-    <div class="w-24 h-1 bg-gradient-to-r from-blue-400 to-cyan-400 mb-6 rounded-full"></div>
-    <div class="text-7xl font-black bg-gradient-to-r from-blue-300 to-cyan-300 bg-clip-text text-transparent mb-3">{data['value']}</div>
-    <h2 class="text-xl font-bold mb-6 text-blue-100">{data['label']}</h2>
-    <div class="mt-auto pt-6">
-      <div class="w-full h-40 bg-white bg-opacity-10 backdrop-blur-sm rounded-xl p-3">
-        <canvas id="miniChart"></canvas>
-      </div>
-    </div>
-    <div class="absolute top-8 right-8 w-3 h-3 bg-cyan-400 rounded-full animate-pulse"></div>
-    <div class="absolute bottom-12 left-8 w-2 h-2 bg-blue-300 rounded-full"></div>
-  </div>
-  <div class="w-1/2 bg-gray-50 px-12 py-12">
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-bold" style="color:#061551">Performance Trend</h3>
-      <div class="flex items-center space-x-2">
-        <div class="w-3 h-3 rounded-full" style="background:#0e68b3"></div>
-        <span class="text-xs font-medium text-gray-600">{data['title']}</span>
-      </div>
-    </div>
-    <div class="h-56 bg-white rounded-xl shadow-sm p-4 mb-4">
-      <canvas id="myChart"></canvas>
-    </div>
-    <div class="h-32 bg-white rounded-xl shadow-sm p-3 mb-4">
-      <canvas id="areaChart"></canvas>
-    </div>
-    <div class="space-y-2">{bullets_html}</div>
-  </div>
-  <div class="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-blue-600"></div>
-</div>
-<script>
-// Wait for Chart.js to load
-window.addEventListener('load', function() {{
-  setTimeout(function() {{
-// Set Chart.js defaults for high quality
-Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-Chart.defaults.plugins.legend.labels.usePointStyle = true;
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        * {{ font-family: 'Inter', sans-serif; }}
+        body {{ margin:0; width:1280px; height:720px; overflow:hidden; background:#000 }}
+        .gradient-left {{ 
+            background:linear-gradient(135deg,#0a1628 0%,#1e3a8a 50%,#1e40af 100%);
+            position:relative;
+            overflow:hidden;
+        }}
+        .gradient-left::before {{
+            content:'';
+            position:absolute;
+            top:-50%;
+            right:-50%;
+            width:100%;
+            height:100%;
+            background:radial-gradient(circle,rgba(96,165,250,0.15) 0%,transparent 70%);
+            animation:float 8s ease-in-out infinite;
+        }}
+        .gradient-left::after {{
+            content:'';
+            position:absolute;
+            bottom:-30%;
+            left:-30%;
+            width:80%;
+            height:80%;
+            background:radial-gradient(circle,rgba(147,197,253,0.1) 0%,transparent 60%);
+            animation:float 6s ease-in-out infinite reverse;
+        }}
+        @keyframes float {{
+            0%, 100% {{ transform:translate(0,0) scale(1); }}
+            50% {{ transform:translate(-20px,20px) scale(1.1); }}
+        }}
+        @keyframes pulse-glow {{
+            0%, 100% {{ opacity:1; box-shadow:0 0 20px rgba(96,165,250,0.6); }}
+            50% {{ opacity:0.7; box-shadow:0 0 30px rgba(96,165,250,0.9); }}
+        }}
+        @keyframes slideIn {{
+            from {{ opacity:0; transform:translateY(20px); }}
+            to {{ opacity:1; transform:translateY(0); }}
+        }}
+        @keyframes shimmer {{
+            0% {{ background-position: -1000px 0; }}
+            100% {{ background-position: 1000px 0; }}
+        }}
+        .animate-slide-in {{ animation:slideIn 0.6s ease-out forwards; }}
+        .delay-1 {{ animation-delay:0.1s; opacity:0; }}
+        .delay-2 {{ animation-delay:0.2s; opacity:0; }}
+        .delay-3 {{ animation-delay:0.3s; opacity:0; }}
+        .delay-4 {{ animation-delay:0.4s; opacity:0; }}
+        .glass-card {{
+            background:rgba(255,255,255,0.95);
+            backdrop-filter:blur(10px);
+            border:1px solid rgba(255,255,255,0.3);
+            box-shadow:0 8px 32px rgba(0,0,0,0.08);
+        }}
+        .stat-card {{
+            background:linear-gradient(135deg,rgba(255,255,255,0.1) 0%,rgba(255,255,255,0.05) 100%);
+            backdrop-filter:blur(10px);
+            border:1px solid rgba(255,255,255,0.2);
+            transition:all 0.3s ease;
+        }}
+        .stat-card:hover {{
+            background:linear-gradient(135deg,rgba(255,255,255,0.15) 0%,rgba(255,255,255,0.08) 100%);
+            transform:translateY(-2px);
+            box-shadow:0 8px 24px rgba(0,0,0,0.2);
+        }}
+        canvas {{ image-rendering:-webkit-optimize-contrast; image-rendering:crisp-edges }}
+        .metric-number {{
+            background:linear-gradient(135deg,#60a5fa 0%,#3b82f6 50%,#2563eb 100%);
+            -webkit-background-clip:text;
+            -webkit-text-fill-color:transparent;
+            background-clip:text;
+            filter:drop-shadow(0 2px 4px rgba(59,130,246,0.3));
+        }}
+    </style>
+</head>
+<body>
+    <div class="w-[1280px] h-[720px] bg-white flex relative">
+        <!-- Left Panel -->
+        <div class="w-1/2 gradient-left px-12 py-8 text-white relative z-10">
+            <div class="inline-block px-4 py-1.5 bg-blue-400 bg-opacity-20 rounded-full mb-4 animate-slide-in border border-blue-300 border-opacity-30">
+                <span class="text-blue-100 font-bold text-xs tracking-widest">METRIC ANALYSIS</span>
+            </div>
+            <h1 class="text-4xl font-black mb-3 animate-slide-in delay-1 leading-tight">{data['title']}</h1>
+            <p class="text-sm font-medium mb-4 text-blue-100 animate-slide-in delay-2">{data['subtitle']}</p>
+            <div class="w-24 h-1 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 mb-6 rounded-full animate-slide-in delay-2"></div>
+            
+            <div class="animate-slide-in delay-3">
+                <div class="text-7xl font-black metric-number mb-3">{data['value']}</div>
+                <h2 class="text-xl font-bold mb-6 text-blue-50">{data['label']}</h2>
+            </div>
 
-const chartData = {chart_data_json};
-const ctx = document.getElementById('myChart').getContext('2d');
-new Chart(ctx, {{
-  type: 'line',
-  data: {{
-    labels: chartData.labels,
-    datasets: [{{
-      label: '{data['title']}',
-      data: chartData.values,
-      borderColor: '#0e68b3',
-      backgroundColor: 'rgba(14, 104, 179, 0.08)',
-      borderWidth: 3,
-      pointRadius: 6,
-      pointBackgroundColor: '#0e68b3',
-      pointBorderColor: '#fff',
-      pointBorderWidth: 2,
-      pointHoverRadius: 8,
-      tension: 0.4,
-      fill: true
-    }}]
-  }},
-  options: {{
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {{
-      legend: {{
-        display: false
-      }},
-      tooltip: {{
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        padding: 12,
-        titleFont: {{ size: 14, weight: 'bold' }},
-        bodyFont: {{ size: 13 }},
-        callbacks: {{
-          label: function(context) {{
-            return '$' + context.parsed.y.toLocaleString();
-          }}
-        }}
-      }}
-    }},
-    scales: {{
-      y: {{
-        beginAtZero: true,
-        ticks: {{
-          callback: function(value) {{
-            return '$' + value.toLocaleString();
-          }},
-          font: {{ size: 11 }}
-        }},
-        grid: {{
-          color: 'rgba(0, 0, 0, 0.05)'
-        }}
-      }},
-      x: {{
-        ticks: {{
-          font: {{ size: 10 }}
-        }},
-        grid: {{
-          display: false
-        }}
-      }}
-    }}
-  }}
-}});
 
-// Mini Area Chart on left side
-const miniCtx = document.getElementById('miniChart').getContext('2d');
-new Chart(miniCtx, {{
-  type: 'line',
-  data: {{
-    labels: chartData.labels,
-    datasets: [{{
-      data: chartData.values,
-      borderColor: '#32bbd8',
-      backgroundColor: 'rgba(50, 187, 216, 0.3)',
-      borderWidth: 2,
-      pointRadius: 0,
-      tension: 0.4,
-      fill: true
-    }}]
-  }},
-  options: {{
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {{ legend: {{ display: false }} }},
-    scales: {{
-      y: {{ display: false, beginAtZero: true }},
-      x: {{ display: false }}
-    }}
-  }}
-}});
+            {f'<div class="grid grid-cols-2 gap-3 mb-6 animate-slide-in delay-4">{kpi_cards_html}</div>' if kpi_cards_html else ''}
+            
+            <div class="animate-slide-in delay-4">
+                <div class="w-full h-32 stat-card rounded-2xl p-3 shadow-2xl">
+                    <canvas id="miniChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="absolute top-8 right-8 w-4 h-4 bg-cyan-400 rounded-full" style="animation:pulse-glow 2s ease-in-out infinite"></div>
+            <div class="absolute bottom-12 left-8 w-3 h-3 bg-blue-400 rounded-full opacity-60"></div>
+            <div class="absolute top-1/3 right-16 w-2 h-2 bg-blue-300 rounded-full opacity-40"></div>
+        </div>
+        
+        <!-- Right Panel -->
+        <div class="w-1/2 bg-gradient-to-br from-gray-50 to-gray-100 px-10 py-8 relative">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-black text-gray-800">Performance Trend</h3>
+                <div class="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-full shadow-sm">
+                    <div class="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-blue-500 to-blue-600"></div>
+                    <span class="text-xs font-bold text-gray-700">{data['title']}</span>
+                </div>
+            </div>
+            <div class="h-52 glass-card rounded-2xl shadow-lg p-5 mb-4 animate-slide-in delay-2">
+                <canvas id="myChart"></canvas>
+            </div>
+            <div class="h-28 glass-card rounded-2xl shadow-lg p-3 mb-4 animate-slide-in delay-3">
+                <canvas id="areaChart"></canvas>
+            </div>
+            <div class="space-y-2 animate-slide-in delay-4">
+                {bullets_html}
+            </div>
+        </div>
+        <div class="absolute bottom-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-cyan-400 to-blue-600"></div>
+    </div>
 
-// Bar Chart on right side bottom
-const areaCtx = document.getElementById('areaChart').getContext('2d');
-new Chart(areaCtx, {{
-  type: 'bar',
-  data: {{
-    labels: chartData.labels.slice(-5),
-    datasets: [{{
-      data: chartData.values.slice(-5),
-      backgroundColor: 'rgba(14, 104, 179, 0.7)',
-      borderColor: '#0e68b3',
-      borderWidth: 0,
-      borderRadius: 4
-    }}]
-  }},
-  options: {{
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {{ 
-      legend: {{ display: false }},
-      tooltip: {{
-        callbacks: {{
-          label: function(context) {{
-            return '$' + context.parsed.y.toLocaleString();
-          }}
-        }}
-      }}
-    }},
-    scales: {{
-      y: {{ 
-        display: true,
-        ticks: {{ 
-          font: {{ size: 9 }},
-          callback: function(value) {{ return '$' + value.toLocaleString(); }}
-        }},
-        grid: {{ display: false }}
-      }},
-      x: {{ 
-        ticks: {{ font: {{ size: 9 }} }},
-        grid: {{ display: false }}
-      }}
-    }}
-  }}
-}});
-  }}, 500);
-}});
-</script>
+
+    <script>
+        // Wait for Chart.js to load
+        window.addEventListener('load', function() {{
+            setTimeout(function() {{
+                // Register datalabels plugin
+                Chart.register(ChartDataLabels);
+
+
+                // Set Chart.js defaults for high quality
+                Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+                Chart.defaults.plugins.legend.labels.usePointStyle = true;
+
+
+                const chartData = {chart_data_json};
+
+
+                // Main Chart
+                const ctx = document.getElementById('myChart').getContext('2d');
+                new Chart(ctx, {{
+                    type: 'line',
+                    data: {{
+                        labels: chartData.labels,
+                        datasets: [{{
+                            label: '{data['title']}',
+                            data: chartData.values,
+                            borderColor: '#2563eb',
+                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                            borderWidth: 4,
+                            pointRadius: 8,
+                            pointBackgroundColor: '#2563eb',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 3,
+                            pointHoverRadius: 10,
+                            pointHoverBorderWidth: 4,
+                            tension: 0.4,
+                            fill: true
+                        }}]
+                    }},
+                    options: {{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        layout: {{
+                            padding: {{
+                                top: 45,
+                                right: 20,
+                                bottom: 15,
+                                left: 10
+                            }}
+                        }},
+                        plugins: {{
+                            legend: {{
+                                display: false
+                            }},
+                            datalabels: {{
+                                display: true,
+                                align: 'top',
+                                anchor: 'end',
+                                offset: 8,
+                                color: '#1e40af',
+                                backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                                borderRadius: 6,
+                                borderWidth: 2,
+                                borderColor: '#3b82f6',
+                                padding: {{
+                                    top: 6,
+                                    bottom: 6,
+                                    left: 10,
+                                    right: 10
+                                }},
+                                font: {{
+                                    size: 12,
+                                    weight: '800',
+                                    family: "'Inter', sans-serif"
+                                }},
+                                formatter: function(value) {{
+                                    if (value >= 1000000) {{
+                                        return '$' + (value / 1000000).toFixed(1) + 'M';
+                                    }} else if (value >= 1000) {{
+                                        return '$' + (value / 1000).toFixed(0) + 'K';
+                                    }}
+                                    return '$' + value.toLocaleString();
+                                }},
+                                clip: false
+                            }},
+                            tooltip: {{
+                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                padding: 16,
+                                titleFont: {{ size: 15, weight: 'bold' }},
+                                bodyFont: {{ size: 14 }},
+                                cornerRadius: 8,
+                                displayColors: false,
+                                callbacks: {{
+                                    label: function(context) {{
+                                        return '$' + context.parsed.y.toLocaleString();
+                                    }}
+                                }}
+                            }}
+                        }},
+                        scales: {{
+                            y: {{
+                                beginAtZero: true,
+                                grace: '15%',
+                                ticks: {{
+                                    callback: function(value) {{
+                                        return '$' + (value/1000000).toFixed(1) + 'M';
+                                    }},
+                                    font: {{ size: 12, weight: '600' }},
+                                    color: '#64748b'
+                                }},
+                                grid: {{
+                                    color: 'rgba(0, 0, 0, 0.04)',
+                                    lineWidth: 1
+                                }},
+                                border: {{ display: false }}
+                            }},
+                            x: {{
+                                ticks: {{
+                                    font: {{ size: 12, weight: '600' }},
+                                    color: '#64748b'
+                                }},
+                                grid: {{
+                                    display: false
+                                }},
+                                border: {{ display: false }}
+                            }}
+                        }},
+                        interaction: {{
+                            intersect: false,
+                            mode: 'index'
+                        }}
+                    }}
+                }});
+
+
+                // Mini Area Chart on left side
+                const miniCtx = document.getElementById('miniChart').getContext('2d');
+                new Chart(miniCtx, {{
+                    type: 'line',
+                    data: {{
+                        labels: chartData.labels,
+                        datasets: [{{
+                            data: chartData.values,
+                            borderColor: '#60a5fa',
+                            backgroundColor: function(context) {{
+                                const ctx = context.chart.ctx;
+                                const gradient = ctx.createLinearGradient(0, 0, 0, 160);
+                                gradient.addColorStop(0, 'rgba(96, 165, 250, 0.5)');
+                                gradient.addColorStop(1, 'rgba(96, 165, 250, 0.05)');
+                                return gradient;
+                            }},
+                            borderWidth: 3,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#60a5fa',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            tension: 0.4,
+                            fill: true
+                        }}]
+                    }},
+                    options: {{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {{ 
+                            legend: {{ display: false }},
+                            datalabels: {{ display: false }},
+                            tooltip: {{
+                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                padding: 12,
+                                cornerRadius: 6,
+                                callbacks: {{
+                                    label: function(context) {{
+                                        return '$' + (context.parsed.y/1000000).toFixed(1) + 'M';
+                                    }}
+                                }}
+                            }}
+                        }},
+                        scales: {{
+                            y: {{ display: false, beginAtZero: true }},
+                            x: {{ display: false }}
+                        }}
+                    }}
+                }});
+
+
+                // Bar Chart on right side bottom
+                const areaCtx = document.getElementById('areaChart').getContext('2d');
+                new Chart(areaCtx, {{
+                    type: 'bar',
+                    data: {{
+                        labels: chartData.labels,
+                        datasets: [{{
+                            data: chartData.values,
+                            backgroundColor: function(context) {{
+                                const chart = context.chart;
+                                const {{ctx, chartArea}} = chart;
+                                if (!chartArea) return '#2563eb';
+                                const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                                gradient.addColorStop(0, '#3b82f6');
+                                gradient.addColorStop(1, '#2563eb');
+                                return gradient;
+                            }},
+                            borderColor: '#1e40af',
+                            borderWidth: 0,
+                            borderRadius: 6,
+                            hoverBackgroundColor: '#1e40af'
+                        }}]
+                    }},
+                    options: {{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {{ 
+                            legend: {{ display: false }},
+                            datalabels: {{ display: false }},
+                            tooltip: {{
+                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                padding: 14,
+                                cornerRadius: 8,
+                                callbacks: {{
+                                    label: function(context) {{
+                                        return '$' + (context.parsed.y/1000000).toFixed(1) + 'M';
+                                    }}
+                                }}
+                            }}
+                        }},
+                        scales: {{
+                            y: {{ 
+                                display: true,
+                                beginAtZero: true,
+                                ticks: {{ 
+                                    font: {{ size: 10, weight: '600' }},
+                                    color: '#64748b',
+                                    callback: function(value) {{ return '$' + (value/1000000).toFixed(1) + 'M'; }}
+                                }},
+                                grid: {{ 
+                                    color: 'rgba(0, 0, 0, 0.04)',
+                                    lineWidth: 1
+                                }},
+                                border: {{ display: false }}
+                            }},
+                            x: {{ 
+                                ticks: {{ 
+                                    font: {{ size: 11, weight: '600' }},
+                                    color: '#64748b'
+                                }},
+                                grid: {{ display: false }},
+                                border: {{ display: false }}
+                            }}
+                        }}
+                    }}
+                }});
+            }}, 500);
+        }});
+    </script>
 </body></html>"""
 
 
