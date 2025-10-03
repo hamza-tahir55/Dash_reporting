@@ -202,7 +202,7 @@ body {{
       <!-- Category Badge -->
       <div class="inline-flex items-center space-x-2 px-5 py-2 glass-effect rounded-full mb-8">
         <div class="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
-        <span class="text-cyan-300 font-bold text-sm tracking-widest uppercase">Quarterly Financial Report</span>
+        <span class="text-cyan-300 font-bold text-sm tracking-widest uppercase">Financial Report</span>
       </div>
       
       <!-- Main Title -->
