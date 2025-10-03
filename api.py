@@ -59,22 +59,22 @@ class GeneratePDFResponse(BaseModel):
 
 
 def _filter_to_ten_slides(all_files: List[str], output_dir: str) -> List[str]:
-    """Filter generated slides to exactly 10 in specific order."""
+    """Include all generated slides - one for each extracted metric."""
     from pathlib import Path
     
     print(f"   📋 All generated files:")
     for f in all_files:
         print(f"      - {Path(f).name}")
     
-    # Define the 10-slide structure
-    slide_order = [
-        'Title',                    # 1. Title slide
+    # Priority order for organizing slides (Title first, then all metrics)
+    slide_priority = [
+        'Title',                    # 1. Title slide (always first)
         'Income',                   # 2. Income/Revenue
         'Cost',                     # 3. Cost of Sales
-        'Expense',                  # 4. Operating Expenses
-        'Gross',                    # 5. Gross Profit
-        'EBITDA',                   # 6. EBITDA
-        'Net',                      # 7. Net Income
+        'Gross',                    # 4. Gross Profit
+        'EBITDA',                   # 5. EBITDA
+        'Net',                      # 6. Net Income
+        'Expense',                  # 7. Operating Expenses
         'Collection',               # 8. Customer Collection Days
         'Payment',                  # 9. Supplier Payment Days
         'Inventory'                 # 10. Inventory Days
@@ -82,20 +82,21 @@ def _filter_to_ten_slides(all_files: List[str], output_dir: str) -> List[str]:
     
     selected_files = []
     
-    for i, pattern in enumerate(slide_order):
-        # Single pattern match
+    # First, add slides in priority order
+    for i, pattern in enumerate(slide_priority):
         for file in all_files:
             if pattern in Path(file).name and file not in selected_files:
                 selected_files.append(file)
-                print(f"   ✅ Slide {i+1}: {Path(file).name}")
+                print(f"   ✅ Slide {len(selected_files)}: {Path(file).name}")
                 break
     
-    print(f"   📊 Selected {len(selected_files)} slides from {len(all_files)} generated")
+    # Then add any remaining slides that weren't matched by priority patterns
+    for file in all_files:
+        if file not in selected_files:
+            selected_files.append(file)
+            print(f"   ✅ Slide {len(selected_files)}: {Path(file).name} (additional metric)")
     
-    # If we don't have enough slides, return what we have
-    if len(selected_files) == 0:
-        print(f"   ⚠️  No slides matched filters, returning all files")
-        return all_files[:10]  # Return first 10
+    print(f"   📊 Including ALL {len(selected_files)} slides from {len(all_files)} generated")
     
     return selected_files
 
@@ -190,8 +191,8 @@ async def generate_presentation(request: FinancialDataRequest):
         
         print(f"\n✅ Generated {len(all_tsx_files)} TSX slide components!")
         
-        # Step 1.5: Filter to only 10 slides in specific order
-        print(f"🎯 Filtering to 10-slide structure...")
+        # Step 1.5: Organize slides - include all extracted metrics
+        print(f"🎯 Organizing slides for all extracted metrics...")
         tsx_files = _filter_to_ten_slides(all_tsx_files, output_dir)
         
         if not tsx_files:
