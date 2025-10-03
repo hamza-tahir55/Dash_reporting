@@ -80,6 +80,12 @@ Return ONLY valid JSON with this structure:
             "value": "$155,815",
             "label": "Peak Revenue (Dec 2020)",
             "description": "Income shows significant volatility...",
+            "kpis": {
+                "vs_previous": {"pct": -44.6, "from": 9384, "to": 5200},
+                "yoy": {"pct": 25.3, "from": 4150, "to": 5200},
+                "previous_label": "Aug 2024",
+                "latest_label": "Sep 2024"
+            },
             "bullet_points": [
                 "Income reached its highest point in December 2020 at $155,815, representing a significant peak in revenue generation during this period.",
                 "The average income across the analyzed timeframe is approximately $15,000, indicating substantial volatility around this baseline figure.",
@@ -141,7 +147,13 @@ CRITICAL - Each metric MUST have:
 2. "value": The LATEST or MOST SIGNIFICANT value with $ (e.g., "$88,912" or "$10.9 days")
 3. "label": A descriptive label (e.g., "Latest Period (Feb 2021)" or "Current Value")
 4. "chart_data": Array of ALL data points found, **SORTED CHRONOLOGICALLY**
-5. "bullet_points": 3-5 descriptive insights that provide context and analysis. Each bullet point should be 1-2 complete sentences explaining trends, comparisons, or key findings with specific numbers, timeframes, and percentages. Include analytical context such as:
+5. "kpis": Object with calculated percentage changes:
+   - "vs_previous": {{"pct": percentage_change, "from": previous_value, "to": current_value}}
+   - "yoy": {{"pct": year_over_year_percentage, "from": previous_year_value, "to": current_year_value}}
+   - "previous_label": "Jan 2021" (or period name)
+   - "latest_label": "Feb 2021" (or period name)
+   Example: "kpis": {{"vs_previous": {{"pct": -63.5, "from": 84629, "to": 30912}}, "previous_label": "Jan 2021", "latest_label": "Feb 2021"}}
+6. "bullet_points": 3-5 descriptive insights that provide context and analysis. Each bullet point should be 1-2 complete sentences explaining trends, comparisons, or key findings with specific numbers, timeframes, and percentages. Include analytical context such as:
    - Peak/lowest values with dates and amounts
    - Percentage changes between periods  
    - Trend direction (increasing/decreasing/volatile)
@@ -336,6 +348,85 @@ export default FinancialTitleSlide;
         chart_data_str = json.dumps(metric.get("chart_data", []), indent=6)
         bullet_points_str = json.dumps(metric.get("bullet_points", []), indent=6)
         
+        # Prepare KPI strings from computed kpis with intelligent period detection
+        k = metric.get("kpis") or {}
+        vs = (k or {}).get("vs_previous") or None
+        yoy = (k or {}).get("yoy") or None
+        prev_label = (k or {}).get("previous_label") or ""
+        latest_label = (k or {}).get("latest_label") or ""
+        
+        def detect_comparison_type(prev_label, latest_label):
+            """Intelligently detect if comparison is MoM, QoQ, YoY, etc."""
+            if not prev_label or not latest_label:
+                return "vs Previous"
+            
+            # Convert to lowercase for easier matching
+            prev = prev_label.lower()
+            latest = latest_label.lower()
+            
+            # Extract years if present
+            import re
+            prev_year = re.search(r'20\d{{2}}', prev)
+            latest_year = re.search(r'20\d{{2}}', latest)
+            
+            # Extract months if present
+            months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 
+                     'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+                     'january', 'february', 'march', 'april', 'may', 'june',
+                     'july', 'august', 'september', 'october', 'november', 'december']
+            
+            prev_has_month = any(month in prev for month in months)
+            latest_has_month = any(month in latest for month in months)
+            
+            # Extract quarters if present
+            quarters = ['q1', 'q2', 'q3', 'q4', 'quarter']
+            prev_has_quarter = any(quarter in prev for quarter in quarters)
+            latest_has_quarter = any(quarter in latest for quarter in quarters)
+            
+            # Year-over-Year detection
+            if prev_year and latest_year:
+                prev_year_val = int(prev_year.group())
+                latest_year_val = int(latest_year.group())
+                if abs(latest_year_val - prev_year_val) >= 1:
+                    return f"YoY ({prev_label} → {latest_label})"
+            
+            # Quarter-over-Quarter detection
+            if prev_has_quarter and latest_has_quarter:
+                return f"QoQ ({prev_label} → {latest_label})"
+            
+            # Month-over-Month detection
+            if prev_has_month and latest_has_month:
+                # Same year, different months = MoM
+                if prev_year and latest_year and prev_year.group() == latest_year.group():
+                    return f"MoM ({prev_label} → {latest_label})"
+                # Different years but consecutive months = MoM (e.g., Dec 2020 → Jan 2021)
+                return f"MoM ({prev_label} → {latest_label})"
+            
+            # Default fallback
+            return f"vs Previous ({prev_label} → {latest_label})"
+        
+        kpi_prev_percent = ""
+        kpi_prev_label = ""
+        if vs is not None and isinstance(vs, dict) and vs.get("pct") is not None:
+            sign = "+" if vs.get("pct", 0) >= 0 else ""
+            kpi_prev_percent = f"{sign}{vs.get('pct')}%"
+            kpi_prev_label = detect_comparison_type(prev_label, latest_label)
+            print(f"  📊 KPI Previous: {kpi_prev_percent} ({kpi_prev_label})")
+        
+        # Handle YoY separately if provided
+        kpi_yoy_percent = ""
+        kpi_yoy_label = ""
+        if yoy is not None and isinstance(yoy, dict) and yoy.get("pct") is not None:
+            sign = "+" if yoy.get("pct", 0) >= 0 else ""
+            kpi_yoy_percent = f"{sign}{yoy.get('pct')}%"
+            yoy_prev = (k or {}).get("yoy_previous_label") or ""
+            yoy_latest = (k or {}).get("yoy_latest_label") or ""
+            kpi_yoy_label = detect_comparison_type(yoy_prev, yoy_latest) if yoy_prev and yoy_latest else "YoY"
+            print(f"  📊 KPI YoY: {kpi_yoy_percent} ({kpi_yoy_label})")
+        
+        if not kpi_prev_percent and not kpi_yoy_percent:
+            print(f"  ⚠️  NO KPI DATA found for {metric_name} - check AI extraction")
+        
         tsx_content = f'''import React from "react";
 import * as z from "zod";
 import {{ ImageSchema }} from "../defaultSchemes";
@@ -351,6 +442,11 @@ export const Schema = z.object({{
   sectionSubtitle: z.string().default("FINANCIAL PERFORMANCE ANALYSIS"),
   statisticValue: z.string().default("{metric.get('value', 'N/A')}"),
   statisticLabel: z.string().default("{metric.get('label', metric_name)}"),
+  // KPI fields (populated from computed time-series)
+  kpiPrevPercent: z.string().default("{kpi_prev_percent}"),
+  kpiPrevLabel: z.string().default("{kpi_prev_label}"),
+  kpiYoyPercent: z.string().default("{kpi_yoy_percent}"),
+  kpiYoyLabel: z.string().default("{kpi_yoy_label}"),
   supportingVisual: ImageSchema.default({{
     __image_url__: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
     __image_prompt__: "Financial analytics dashboard with charts and data"
