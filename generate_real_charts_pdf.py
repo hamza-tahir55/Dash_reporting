@@ -110,75 +110,165 @@ def parse_tsx_with_data(file_path):
 
 def generate_title_html(data):
     """Generate modern title slide with brand colors."""
+    logo_src = get_logo_base64()
+    
     return f"""<!DOCTYPE html>
-<html><head><meta charset="UTF-8">
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Financial Report</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-body{{margin:0;width:1280px;height:720px;overflow:hidden}}
-.gradient-bg{{background:linear-gradient(135deg,#061551 0%,#0e68b3 100%)}}
+body {{
+  margin: 0;
+  width: 1280px;
+  height: 720px;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}}
+.gradient-bg {{
+  background: linear-gradient(135deg, #061551 0%, #0a4d8f 50%, #0e68b3 100%);
+}}
+.accent-gradient {{
+  background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+}}
+.glass-effect {{
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}}
+@keyframes float {{
+  0%, 100% {{ transform: translateY(0px) rotate(0deg); }}
+  50% {{ transform: translateY(-20px) rotate(5deg); }}
+}}
+.float-animation {{
+  animation: float 6s ease-in-out infinite;
+}}
+@keyframes pulse-glow {{
+  0%, 100% {{ opacity: 0.15; }}
+  50% {{ opacity: 0.25; }}
+}}
+.pulse-glow {{
+  animation: pulse-glow 4s ease-in-out infinite;
+}}
 </style>
-</head><body>
+</head>
+<body>
 <div class="w-[1280px] h-[720px] gradient-bg relative overflow-hidden">
-  <!-- Decorative Elements -->
-  <div class="absolute top-0 right-0 w-96 h-96 bg-blue-400 rounded-full opacity-10 blur-3xl"></div>
-  <div class="absolute bottom-0 left-0 w-80 h-80 bg-cyan-400 rounded-full opacity-10 blur-3xl"></div>
   
-  <!-- Header -->
+  <!-- Animated Background Elements -->
+  <div class="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-blue-400 rounded-full opacity-15 blur-3xl pulse-glow"></div>
+  <div class="absolute bottom-[-10%] left-[-5%] w-[450px] h-[450px] bg-cyan-400 rounded-full opacity-15 blur-3xl pulse-glow" style="animation-delay: 2s;"></div>
+  <div class="absolute top-[30%] right-[10%] w-[300px] h-[300px] bg-blue-500 rounded-full opacity-10 blur-2xl float-animation"></div>
+  
+  <!-- Geometric Accents -->
+  <div class="absolute top-[15%] right-[20%] w-16 h-16 border-2 border-blue-400 opacity-20 rotate-45"></div>
+  <div class="absolute bottom-[25%] left-[15%] w-20 h-20 border-2 border-cyan-400 opacity-20 rotate-12"></div>
+  
+  <!-- Header Bar -->
   <div class="absolute top-0 left-0 right-0 px-16 py-8 flex justify-between items-center z-20">
-    <div class="flex items-center space-x-3">
-      <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
-        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-        </svg>
+    <div class="flex items-center space-x-4">
+      <div class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/30 p-2">
+        <img src="{logo_src}" 
+             alt="DashAnalytix Logo" 
+             class="w-full h-full object-contain">
       </div>
-      <span class="text-2xl font-bold text-white">Financial Analysis</span>
+      <div>
+        <div class="text-2xl font-bold text-white tracking-tight">DashAnalytix</div>
+        <div class="text-xs text-blue-300 font-medium tracking-wider">FINANCIAL INTELLIGENCE</div>
+      </div>
+    </div>
+    <div class="glass-effect px-6 py-2 rounded-full">
+      <span class="text-blue-200 font-semibold text-sm">CONFIDENTIAL</span>
     </div>
   </div>
   
-  <!-- Main Content -->
+  <!-- Main Content Area -->
   <div class="relative h-full flex flex-col justify-center px-16 z-10">
-    <div class="max-w-4xl">
-      <div class="inline-block px-6 py-2 bg-blue-500 bg-opacity-20 rounded-full mb-6">
-        <span class="text-blue-300 font-semibold text-sm tracking-wider">FINANCIAL REPORT</span>
+    <div class="max-w-5xl">
+      
+      <!-- Category Badge -->
+      <div class="inline-flex items-center space-x-2 px-5 py-2 glass-effect rounded-full mb-8">
+        <div class="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
+        <span class="text-cyan-300 font-bold text-sm tracking-widest uppercase">Quarterly Financial Report</span>
       </div>
-      <h1 class="text-6xl font-black text-white leading-tight mb-6 tracking-tight">
+      
+      <!-- Main Title -->
+      <h1 class="text-7xl font-black text-white leading-[1.1] mb-8 tracking-tight">
         {data['title']}
       </h1>
-      <div class="flex items-center space-x-4 mb-8">
-        <div class="w-1 h-12 bg-gradient-to-b from-blue-400 to-cyan-400"></div>
-        <h2 class="text-2xl font-semibold text-blue-100">
+      
+      <!-- Subtitle with Accent Line -->
+      <div class="flex items-center space-x-5 mb-10">
+        <div class="w-1.5 h-16 accent-gradient rounded-full shadow-lg shadow-blue-500/50"></div>
+        <h2 class="text-3xl font-bold text-blue-100 leading-tight">
           {data['subtitle']}
         </h2>
       </div>
-      <div class="flex items-center space-x-8 text-blue-200">
-        <div class="flex items-center space-x-2">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      
+      <!-- Metadata Row -->
+      <div class="flex items-center space-x-10 text-blue-200">
+        <div class="flex items-center space-x-3 glass-effect px-5 py-3 rounded-xl">
+          <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
           </svg>
-          <span class="font-medium">September 2024</span>
+          <div>
+            <div class="text-xs text-blue-300 font-medium">Report Date</div>
+            <div class="font-bold text-white">{data.get('date', 'October 2024')}</div>
+          </div>
         </div>
-        <div class="flex items-center space-x-2">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        
+        <div class="flex items-center space-x-3 glass-effect px-5 py-3 rounded-xl">
+          <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
           </svg>
-          <span class="font-medium">Professional Analysis</span>
+          <div>
+            <div class="text-xs text-blue-300 font-medium">Document Type</div>
+            <div class="font-bold text-white">{data.get('doc_type', 'Executive Summary')}</div>
+          </div>
+        </div>
+        
+        <div class="flex items-center space-x-3 glass-effect px-5 py-3 rounded-xl">
+          <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+          </svg>
+          <div>
+            <div class="text-xs text-blue-300 font-medium">Prepared By</div>
+            <div class="font-bold text-white">{data.get('prepared_by', 'Analytics Team')}</div>
+          </div>
         </div>
       </div>
     </div>
   </div>
   
-  <!-- Footer -->
-  <div class="absolute bottom-0 left-0 right-0 px-16 py-6 bg-black bg-opacity-20 backdrop-blur-sm">
-    <div class="flex justify-between text-blue-100 text-sm">
-      <div class="flex space-x-12">
-        <div><span class="opacity-70">Email:</span> <span class="font-semibold">contact@DashAnalytix.com</span></div>
-        <div><span class="opacity-70">Web:</span> <span class="font-semibold">www.app.dashanalytix.com</span></div>
+  <!-- Footer Bar -->
+  <div class="absolute bottom-0 left-0 right-0 px-16 py-6 bg-gradient-to-r from-black/40 via-black/30 to-black/40 backdrop-blur-md border-t border-white/10">
+    <div class="flex justify-between items-center text-blue-100">
+      <div class="flex items-center space-x-12 text-sm">
+        <div class="flex items-center space-x-2">
+          <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+          <span class="font-semibold">{data.get('email', 'contact@dashanalytix.com')}</span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+          </svg>
+          <span class="font-semibold">{data.get('website', 'www.app.dashanalytix.com')}</span>
+        </div>
       </div>
-      <div class="font-semibold">Organization 1</div>
+      <div class="flex items-center space-x-3">
+        <div class="text-sm font-bold">{data.get('organization', 'Organization 1')}</div>
+        <div class="w-2 h-2 bg-cyan-400 rounded-full"></div>
+        <div class="text-sm opacity-70">Page 1</div>
+      </div>
     </div>
   </div>
 </div>
-</body></html>"""
+</body>
+</html>"""
 
 
 def generate_statistic_html_with_real_chart(data):
