@@ -32,7 +32,11 @@ def parse_tsx_with_data(file_path):
         'value': '',
         'label': '',
         'bullets': [],
-        'chart_data': []
+        'chart_data': [],
+        'kpi_prev_percent': '',
+        'kpi_prev_label': '',
+        'kpi_yoy_percent': '',
+        'kpi_yoy_label': ''
     }
     
     # Extract text fields
@@ -49,6 +53,14 @@ def parse_tsx_with_data(file_path):
                     data['value'] = value
                 elif 'statisticLabel' in line:
                     data['label'] = value
+                elif 'kpiPrevPercent' in line:
+                    data['kpi_prev_percent'] = value
+                elif 'kpiPrevLabel' in line:
+                    data['kpi_prev_label'] = value
+                elif 'kpiYoyPercent' in line:
+                    data['kpi_yoy_percent'] = value
+                elif 'kpiYoyLabel' in line:
+                    data['kpi_yoy_label'] = value
         
         # Extract bullet points
         if 'bulletPoints' in line and '.default([' in line:
