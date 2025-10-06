@@ -743,8 +743,29 @@ def generate_statistic_html_with_real_chart(data):
 
 
 def generate_dashboard_html_with_real_data(all_metrics_data):
-    """Generate comprehensive dashboard slide with real data from all metrics."""
+    """Generate comprehensive dashboard slide with real data from all metrics EXCEPT the 4 detailed ones."""
     print(f"🏢 Generating Business Health Dashboard with {len(all_metrics_data)} metrics")
+    
+    # Exclude the 4 metrics that get detailed slides
+    detailed_metrics = ['income', 'gross profit', 'net income', 'cash balance', 'cash']
+    
+    # Filter out detailed metrics from dashboard
+    dashboard_metrics = []
+    excluded_metrics = []
+    
+    for metric in all_metrics_data:
+        metric_name = metric.get('title', '').lower()
+        is_detailed_metric = any(detailed in metric_name for detailed in detailed_metrics)
+        
+        if is_detailed_metric:
+            excluded_metrics.append(metric.get('title', 'Unknown'))
+        else:
+            dashboard_metrics.append(metric)
+    
+    print(f"   📊 Dashboard metrics: {len(dashboard_metrics)} included")
+    print(f"   🎯 Detailed metrics excluded: {excluded_metrics}")
+    
+    all_metrics_data = dashboard_metrics  # Use only dashboard metrics
     
     # Debug: Print all received metrics
     print(f"   📋 Received metrics:")
