@@ -746,6 +746,14 @@ def generate_dashboard_html_with_real_data(all_metrics_data):
     """Generate comprehensive dashboard slide with real data from all metrics."""
     print(f"🏢 Generating Business Health Dashboard with {len(all_metrics_data)} metrics")
     
+    # Debug: Print all received metrics
+    print(f"   📋 Received metrics:")
+    for i, metric in enumerate(all_metrics_data):
+        print(f"      {i+1}. {metric.get('title', 'Unknown')} - {len(metric.get('chart_data', []))} data points")
+        if metric.get('chart_data'):
+            for point in metric.get('chart_data', []):
+                print(f"         • {point.get('name', 'N/A')}: ${point.get('series1', 0):,.0f}")
+    
     # Extract financial metrics (Income, Gross Profit, EBITDA, Net Income, Expenses)
     financial_metrics = []
     financial_period1 = []
@@ -766,16 +774,19 @@ def generate_dashboard_html_with_real_data(all_metrics_data):
         chart_data = metric_data.get('chart_data', [])
         
         if len(chart_data) >= 2:
-            # Get the two most recent periods
-            recent_data = sorted(chart_data, key=lambda x: x.get('name', ''))[-2:]
-            period1_val = recent_data[0].get('series1', 0)
-            period2_val = recent_data[1].get('series1', 0)
-            period1_label = recent_data[0].get('name', 'Previous')
-            period2_label = recent_data[1].get('name', 'Current')
+            # Sort chronologically and get the two most recent periods
+            sorted_data = sorted(chart_data, key=lambda x: x.get('name', ''))
+            period1_val = sorted_data[-2].get('series1', 0)  # Second to last (previous)
+            period2_val = sorted_data[-1].get('series1', 0)  # Last (current)
+            period1_label = sorted_data[-2].get('name', 'Previous')
+            period2_label = sorted_data[-1].get('name', 'Current')
+            
+            print(f"   📊 {metric_name}: {period1_label} ${period1_val:,.0f} → {period2_label} ${period2_val:,.0f}")
             
             # Calculate percentage change
             if period1_val > 0:
                 change_pct = ((period2_val - period1_val) / period1_val) * 100
+                print(f"      Change: {change_pct:+.1f}%")
             else:
                 change_pct = 0
             
@@ -785,11 +796,14 @@ def generate_dashboard_html_with_real_data(all_metrics_data):
                 financial_period1.append(period1_val)
                 financial_period2.append(period2_val)
                 financial_changes.append(change_pct)
-            elif any(keyword in metric_name.lower() for keyword in ['collection', 'payment', 'inventory', 'days']):
+            elif any(keyword in metric_name.lower() for keyword in ['collection', 'payment', 'inventory', 'days', 'customer collection', 'supplier payment']):
                 operational_metrics.append(metric_name)
                 operational_previous.append(period1_val)
                 operational_current.append(period2_val)
                 operational_changes.append(change_pct)
+                print(f"      ✅ Added to operational: {metric_name}")
+            else:
+                print(f"      ⚠️  Uncategorized metric: {metric_name}")
     
     # Build financial metric cards HTML
     financial_cards_html = ""
@@ -804,28 +818,35 @@ def generate_dashboard_html_with_real_data(all_metrics_data):
     
     # Build operational metric cards HTML
     operational_cards_html = ""
-    for i, (metric, prev, curr, change) in enumerate(zip(operational_metrics[:3], operational_previous[:3], operational_current[:3], operational_changes[:3])):
-        change_val = curr - prev
-        sign = "+" if change_val >= 0 else ""
-        color = "red" if change_val > 0 else "green"
-        arrow_direction = "up" if change_val > 0 else "down"
-        arrow_path = "M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" if change_val > 0 else "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-        
-        operational_cards_html += f'''
-        <div class="glass-card rounded-xl p-3 shadow-md border-l-4 border-{["blue", "cyan", "blue"][i]}-600 hover:shadow-lg transition-all duration-300">
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="text-xs font-semibold text-gray-500 mb-0.5">{metric}</div>
-              <div class="flex items-baseline space-x-2">
-                <span class="text-2xl font-black text-{["blue", "cyan", "blue"][i]}-600">{curr:.0f}</span>
-                <span class="text-sm font-bold text-gray-400">→ {prev:.0f}</span>
-                <span class="text-xs px-2 py-0.5 bg-{color}-100 text-{color}-700 rounded-full font-bold">{sign}{change_val:.0f}</span>
+    if operational_metrics:
+        for i, (metric, prev, curr, change) in enumerate(zip(operational_metrics[:3], operational_previous[:3], operational_current[:3], operational_changes[:3])):
+            change_val = curr - prev
+            sign = "+" if change_val >= 0 else ""
+            color = "red" if change_val > 0 else "green"
+            arrow_direction = "up" if change_val > 0 else "down"
+            arrow_path = "M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" if change_val > 0 else "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+            
+            operational_cards_html += f'''
+            <div class="glass-card rounded-xl p-3 shadow-md border-l-4 border-{["blue", "cyan", "blue"][i]}-600 hover:shadow-lg transition-all duration-300">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="text-xs font-semibold text-gray-500 mb-0.5">{metric}</div>
+                  <div class="flex items-baseline space-x-2">
+                    <span class="text-2xl font-black text-{["blue", "cyan", "blue"][i]}-600">{curr:.1f}</span>
+                    <span class="text-sm font-bold text-gray-400">← {prev:.1f}</span>
+                    <span class="text-xs px-2 py-0.5 bg-{color}-100 text-{color}-700 rounded-full font-bold">{sign}{change_val:.1f}</span>
+                  </div>
+                </div>
+                <svg class="w-8 h-8 text-{color}-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="{arrow_path}"/>
+                </svg>
               </div>
-            </div>
-            <svg class="w-8 h-8 text-{color}-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="{arrow_path}"/>
-            </svg>
-          </div>
+            </div>'''
+    else:
+        # Show placeholder if no operational metrics
+        operational_cards_html = '''
+        <div class="glass-card rounded-xl p-4 shadow-md text-center">
+          <div class="text-sm text-gray-500">No operational metrics available</div>
         </div>'''
     
     # Prepare chart data as JSON
