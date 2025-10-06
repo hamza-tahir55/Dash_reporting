@@ -59,81 +59,46 @@ class GeneratePDFResponse(BaseModel):
     slides_count: int
 
 
-def _filter_to_six_slides(all_files: List[str], output_dir: str) -> List[str]:
-    """Filter to exactly 6 slides: Title + Dashboard + 4 specific detailed metrics."""
+def _filter_to_ten_slides(all_files: List[str], output_dir: str) -> List[str]:
+    """Include all generated slides - one for each extracted metric."""
     from pathlib import Path
     
     print(f"   📋 All generated files:")
     for f in all_files:
         print(f"      - {Path(f).name}")
     
-    # ONLY these 4 metrics get detailed slides (slides 3-6) - flexible matching
-    detailed_metrics_patterns = [
-        ['Income', 'Revenue'],                    # Slide 3: Income/Revenue detailed slide
-        ['Gross', 'GrossProfit'],                # Slide 4: Gross Profit detailed slide  
-        ['Net', 'NetIncome', 'NetProfit'],       # Slide 5: Net Income detailed slide
-        ['Cash', 'CashBalance', 'CashPosition']  # Slide 6: Cash Balance detailed slide
+    # Priority order for organizing slides (Title first, Dashboard second, then all metrics)
+    slide_priority = [
+        'Title',                    # 1. Title slide (always first)
+        'Dashboard',                # 2. Business Health Dashboard (summary)
+        'Income',                   # 3. Income/Revenue
+        'Cost',                     # 4. Cost of Sales
+        'Gross',                    # 5. Gross Profit
+        'EBITDA',                   # 6. EBITDA
+        'Net',                      # 7. Net Income
+        'Expense',                  # 8. Operating Expenses
+        'Collection',               # 9. Customer Collection Days
+        'Payment',                  # 10. Supplier Payment Days
+        'Inventory'                 # 11. Inventory Days
     ]
     
     selected_files = []
     
-    # Slide 1: Title slide (always first)
-    for file in all_files:
-        if 'Title' in Path(file).name:
-            selected_files.append(file)
-            print(f"   ✅ Slide 1: {Path(file).name} (Title)")
-            break
-    
-    # Slide 2: Dashboard slide (always second)
-    for file in all_files:
-        if 'Dashboard' in Path(file).name:
-            selected_files.append(file)
-            print(f"   ✅ Slide 2: {Path(file).name} (Business Health Dashboard)")
-            break
-    
-    # Slides 3-6: Only the 4 specific detailed metrics (flexible matching)
-    for i, pattern_group in enumerate(detailed_metrics_patterns, 3):
-        found = False
+    # First, add slides in priority order
+    for i, pattern in enumerate(slide_priority):
         for file in all_files:
-            file_name = Path(file).name
-            if file not in selected_files:
-                # Check if any pattern in the group matches
-                for pattern in pattern_group:
-                    if pattern in file_name:
-                        selected_files.append(file)
-                        print(f"   ✅ Slide {i}: {file_name} (Detailed {pattern_group[0]})")
-                        found = True
-                        break
-                if found:
-                    break
-        if not found:
-            print(f"   ⚠️  Slide {i}: No {pattern_group[0]} metric found - will be skipped")
-    
-    # Log which metrics will be dashboard-only
-    dashboard_metrics = []
-    for file in all_files:
-        file_name = Path(file).name
-        is_detailed = False
-        
-        # Check if this file matches any detailed metric pattern
-        for pattern_group in detailed_metrics_patterns:
-            for pattern in pattern_group:
-                if pattern in file_name:
-                    is_detailed = True
-                    break
-            if is_detailed:
+            if pattern in Path(file).name and file not in selected_files:
+                selected_files.append(file)
+                print(f"   ✅ Slide {len(selected_files)}: {Path(file).name}")
                 break
-        
-        # If not detailed and not title/dashboard, it's dashboard-only
-        if not is_detailed and not any(excluded in file_name for excluded in ['Title', 'Dashboard']):
-            dashboard_metrics.append(file_name)
     
-    if dashboard_metrics:
-        print(f"   📊 Dashboard-only metrics ({len(dashboard_metrics)}):")
-        for metric in dashboard_metrics:
-            print(f"      - {metric}")
+    # Then add any remaining slides that weren't matched by priority patterns
+    for file in all_files:
+        if file not in selected_files:
+            selected_files.append(file)
+            print(f"   ✅ Slide {len(selected_files)}: {Path(file).name} (additional metric)")
     
-    print(f"   🎯 Final structure: {len(selected_files)} slides (Title + Dashboard + {len(selected_files)-2} detailed)")
+    print(f"   📊 Including ALL {len(selected_files)} slides from {len(all_files)} generated")
     
     return selected_files
 
@@ -268,9 +233,9 @@ export default BusinessDashboardSlide;'''
         
         print(f"\n✅ Generated {len(all_tsx_files)} TSX slide components!")
         
-        # Step 1.5: Organize slides - Title + Dashboard + 4 specific detailed metrics only
-        print(f"🎯 Organizing slides: Title + Dashboard + 4 detailed metrics...")
-        tsx_files = _filter_to_six_slides(all_tsx_files, output_dir)
+        # Step 1.5: Organize slides - include all extracted metrics
+        print(f"🎯 Organizing slides for all extracted metrics...")
+        tsx_files = _filter_to_ten_slides(all_tsx_files, output_dir)
         
         if not tsx_files:
             raise HTTPException(status_code=500, detail="Failed to generate TSX slides")
