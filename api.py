@@ -19,7 +19,8 @@ from generate_real_charts_pdf import (
     parse_tsx_with_data,
     generate_title_html,
     generate_statistic_html_with_real_chart,
-    generate_comparison_html_with_real_charts
+    generate_comparison_html_with_real_charts,
+    generate_dashboard_html_with_real_data
 )
 from PyPDF2 import PdfMerger
 
@@ -66,18 +67,19 @@ def _filter_to_ten_slides(all_files: List[str], output_dir: str) -> List[str]:
     for f in all_files:
         print(f"      - {Path(f).name}")
     
-    # Priority order for organizing slides (Title first, then all metrics)
+    # Priority order for organizing slides (Title first, Dashboard second, then all metrics)
     slide_priority = [
         'Title',                    # 1. Title slide (always first)
-        'Income',                   # 2. Income/Revenue
-        'Cost',                     # 3. Cost of Sales
-        'Gross',                    # 4. Gross Profit
-        'EBITDA',                   # 5. EBITDA
-        'Net',                      # 6. Net Income
-        'Expense',                  # 7. Operating Expenses
-        'Collection',               # 8. Customer Collection Days
-        'Payment',                  # 9. Supplier Payment Days
-        'Inventory'                 # 10. Inventory Days
+        'Dashboard',                # 2. Business Health Dashboard (summary)
+        'Income',                   # 3. Income/Revenue
+        'Cost',                     # 4. Cost of Sales
+        'Gross',                    # 5. Gross Profit
+        'EBITDA',                   # 6. EBITDA
+        'Net',                      # 7. Net Income
+        'Expense',                  # 8. Operating Expenses
+        'Collection',               # 9. Customer Collection Days
+        'Payment',                  # 10. Supplier Payment Days
+        'Inventory'                 # 11. Inventory Days
     ]
     
     selected_files = []
@@ -177,6 +179,46 @@ async def generate_presentation(request: FinancialDataRequest):
         title_file = generator._generate_title_slide(parsed_data, output_path)
         all_tsx_files.append(title_file)
         
+        # Generate dashboard slide (summary of all metrics)
+        print("🏢 Generating Business Health Dashboard...")
+        dashboard_file = str(output_path / "BusinessDashboardSlide.tsx")
+        dashboard_content = '''import React from "react";
+import * as z from "zod";
+
+export const layoutName = "Business Health Dashboard";
+export const layoutId = "business-dashboard-slide";
+export const layoutDescription = "Comprehensive financial and operational dashboard";
+
+export const Schema = z.object({
+  dashboardTitle: z.string().default("Business Health Dashboard"),
+  dashboardSubtitle: z.string().default("Comprehensive Financial Analysis"),
+  showComparativeAnalysis: z.boolean().default(true),
+});
+
+type SchemaType = z.infer<typeof Schema>;
+
+const BusinessDashboardSlide = ({ data }: { data: Partial<SchemaType> }) => {
+  return (
+    <div className="aspect-video max-w-[1280px] w-full bg-white relative overflow-hidden">
+      <div className="text-center p-8">
+        <h1 className="text-4xl font-bold text-gray-800 mb-4">
+          {data.dashboardTitle || "Business Health Dashboard"}
+        </h1>
+        <p className="text-xl text-gray-600">
+          {data.dashboardSubtitle || "Comprehensive Financial Analysis"}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default BusinessDashboardSlide;'''
+        
+        with open(dashboard_file, 'w') as f:
+            f.write(dashboard_content)
+        all_tsx_files.append(dashboard_file)
+        print(f"  ✓ Created: {dashboard_file}")
+        
         # Generate statistic slides for each metric
         print("📊 Generating Statistic Slides...")
         for metric in parsed_data.get("metrics", []):
@@ -231,6 +273,14 @@ async def generate_presentation(request: FinancialDataRequest):
                     data['website'] = request.contact_website
                     data['date'] = request.presentation_date or datetime.now().strftime("%B %Y")
                     html = generate_title_html(data)
+                elif 'Dashboard' in tsx_file.name:
+                    # Generate dashboard slide with all metrics data
+                    all_metrics_data = []
+                    for f in sorted_files:
+                        if f.name != tsx_file.name and 'Title' not in f.name and 'Dashboard' not in f.name:
+                            metric_data = parse_tsx_with_data(f)
+                            all_metrics_data.append(metric_data)
+                    html = generate_dashboard_html_with_real_data(all_metrics_data)
                 elif data['type'] == 'comparison':
                     html = generate_comparison_html_with_real_charts(data)
                 else:
@@ -239,9 +289,13 @@ async def generate_presentation(request: FinancialDataRequest):
                 await page.set_content(html)
                 await page.wait_for_load_state('networkidle')
                 
-                if data['type'] != 'title':
+                if data['type'] != 'title' and 'Dashboard' not in tsx_file.name:
                     await page.wait_for_timeout(6000)
                     await page.wait_for_selector('canvas', timeout=15000)
+                elif 'Dashboard' in tsx_file.name:
+                    # Dashboard has multiple charts, wait longer
+                    await page.wait_for_timeout(8000)
+                    await page.wait_for_selector('canvas', timeout=20000)
                 else:
                     await page.wait_for_timeout(1000)
                 

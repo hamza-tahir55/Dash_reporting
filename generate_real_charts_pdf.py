@@ -742,6 +742,444 @@ def generate_statistic_html_with_real_chart(data):
 </body></html>"""
 
 
+def generate_dashboard_html_with_real_data(all_metrics_data):
+    """Generate comprehensive dashboard slide with real data from all metrics."""
+    print(f"🏢 Generating Business Health Dashboard with {len(all_metrics_data)} metrics")
+    
+    # Extract financial metrics (Income, Gross Profit, EBITDA, Net Income, Expenses)
+    financial_metrics = []
+    financial_period1 = []
+    financial_period2 = []
+    financial_changes = []
+    
+    # Extract operational metrics (Collection Days, Payment Days, Inventory Days)
+    operational_metrics = []
+    operational_current = []
+    operational_previous = []
+    operational_changes = []
+    
+    period1_label = "Previous"
+    period2_label = "Current"
+    
+    for metric_data in all_metrics_data:
+        metric_name = metric_data.get('title', 'Unknown')
+        chart_data = metric_data.get('chart_data', [])
+        
+        if len(chart_data) >= 2:
+            # Get the two most recent periods
+            recent_data = sorted(chart_data, key=lambda x: x.get('name', ''))[-2:]
+            period1_val = recent_data[0].get('series1', 0)
+            period2_val = recent_data[1].get('series1', 0)
+            period1_label = recent_data[0].get('name', 'Previous')
+            period2_label = recent_data[1].get('name', 'Current')
+            
+            # Calculate percentage change
+            if period1_val > 0:
+                change_pct = ((period2_val - period1_val) / period1_val) * 100
+            else:
+                change_pct = 0
+            
+            # Categorize metrics
+            if any(keyword in metric_name.lower() for keyword in ['income', 'revenue', 'gross', 'ebitda', 'net', 'expense', 'cost']):
+                financial_metrics.append(metric_name)
+                financial_period1.append(period1_val)
+                financial_period2.append(period2_val)
+                financial_changes.append(change_pct)
+            elif any(keyword in metric_name.lower() for keyword in ['collection', 'payment', 'inventory', 'days']):
+                operational_metrics.append(metric_name)
+                operational_previous.append(period1_val)
+                operational_current.append(period2_val)
+                operational_changes.append(change_pct)
+    
+    # Build financial metric cards HTML
+    financial_cards_html = ""
+    for i, (metric, change) in enumerate(zip(financial_metrics[:5], financial_changes[:5])):
+        sign = "+" if change >= 0 else ""
+        color = "blue" if i == 0 else ["cyan", "blue", "indigo", "orange"][i % 4]
+        financial_cards_html += f'''
+        <div class="metric-card glass-card rounded-xl p-3 shadow-md text-center border-l-4 border-{color}-600">
+          <div class="text-2xl font-black text-{color}-600">{sign}{change:.1f}%</div>
+          <div class="text-xs font-semibold text-gray-600 mt-1">{metric.replace(' ', '<br>')}</div>
+        </div>'''
+    
+    # Build operational metric cards HTML
+    operational_cards_html = ""
+    for i, (metric, prev, curr, change) in enumerate(zip(operational_metrics[:3], operational_previous[:3], operational_current[:3], operational_changes[:3])):
+        change_val = curr - prev
+        sign = "+" if change_val >= 0 else ""
+        color = "red" if change_val > 0 else "green"
+        arrow_direction = "up" if change_val > 0 else "down"
+        arrow_path = "M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" if change_val > 0 else "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+        
+        operational_cards_html += f'''
+        <div class="glass-card rounded-xl p-3 shadow-md border-l-4 border-{["blue", "cyan", "blue"][i]}-600 hover:shadow-lg transition-all duration-300">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-xs font-semibold text-gray-500 mb-0.5">{metric}</div>
+              <div class="flex items-baseline space-x-2">
+                <span class="text-2xl font-black text-{["blue", "cyan", "blue"][i]}-600">{curr:.0f}</span>
+                <span class="text-sm font-bold text-gray-400">→ {prev:.0f}</span>
+                <span class="text-xs px-2 py-0.5 bg-{color}-100 text-{color}-700 rounded-full font-bold">{sign}{change_val:.0f}</span>
+              </div>
+            </div>
+            <svg class="w-8 h-8 text-{color}-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="{arrow_path}"/>
+            </svg>
+          </div>
+        </div>'''
+    
+    # Prepare chart data as JSON
+    financial_data_json = {
+        'metrics': financial_metrics[:5],
+        'period1': financial_period1[:5],
+        'period2': financial_period2[:5]
+    }
+    
+    operational_data_json = {
+        'metrics': operational_metrics[:3],
+        'period1': operational_previous[:3],
+        'period2': operational_current[:3]
+    }
+    
+    print(f"   📊 Financial metrics: {len(financial_metrics)} found")
+    print(f"   🔧 Operational metrics: {len(operational_metrics)} found")
+    print(f"   📅 Period comparison: {period1_label} vs {period2_label}")
+
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        * {{ font-family: 'Inter', sans-serif; }}
+        body {{ margin:0; width:1280px; height:720px; overflow:hidden; background:#000 }}
+        .gradient-header {{ 
+            background:linear-gradient(135deg,#0a1628 0%,#1e3a8a 50%,#1e40af 100%);
+            position:relative;
+            overflow:hidden;
+        }}
+        .gradient-header::before {{
+            content:'';
+            position:absolute;
+            top:-50%;
+            right:-50%;
+            width:100%;
+            height:100%;
+            background:radial-gradient(circle,rgba(96,165,250,0.15) 0%,transparent 70%);
+            animation:float 8s ease-in-out infinite;
+        }}
+        .gradient-header::after {{
+            content:'';
+            position:absolute;
+            bottom:-30%;
+            left:-30%;
+            width:80%;
+            height:80%;
+            background:radial-gradient(circle,rgba(147,197,253,0.1) 0%,transparent 60%);
+            animation:float 6s ease-in-out infinite reverse;
+        }}
+        @keyframes float {{
+            0%, 100% {{ transform:translate(0,0) scale(1); }}
+            50% {{ transform:translate(-20px,20px) scale(1.1); }}
+        }}
+        @keyframes pulse-glow {{
+            0%, 100% {{ opacity:1; box-shadow:0 0 20px rgba(96,165,250,0.6); }}
+            50% {{ opacity:0.7; box-shadow:0 0 30px rgba(96,165,250,0.9); }}
+        }}
+        @keyframes slideIn {{
+            from {{ opacity:0; transform:translateY(20px); }}
+            to {{ opacity:1; transform:translateY(0); }}
+        }}
+        .animate-slide-in {{ animation:slideIn 0.6s ease-out forwards; }}
+        .delay-1 {{ animation-delay:0.1s; opacity:0; }}
+        .delay-2 {{ animation-delay:0.2s; opacity:0; }}
+        .delay-3 {{ animation-delay:0.3s; opacity:0; }}
+        .delay-4 {{ animation-delay:0.4s; opacity:0; }}
+        .glass-card {{
+            background:rgba(255,255,255,0.95);
+            backdrop-filter:blur(10px);
+            border:1px solid rgba(255,255,255,0.3);
+            box-shadow:0 8px 32px rgba(0,0,0,0.08);
+        }}
+        .stat-card {{
+            background:linear-gradient(135deg,rgba(255,255,255,0.1) 0%,rgba(255,255,255,0.05) 100%);
+            backdrop-filter:blur(10px);
+            border:1px solid rgba(255,255,255,0.2);
+            transition:all 0.3s ease;
+        }}
+        .stat-card:hover {{
+            background:linear-gradient(135deg,rgba(255,255,255,0.15) 0%,rgba(255,255,255,0.08) 100%);
+            transform:translateY(-2px);
+            box-shadow:0 8px 24px rgba(0,0,0,0.2);
+        }}
+        canvas {{ image-rendering:-webkit-optimize-contrast; image-rendering:crisp-edges }}
+        .metric-card {{
+            transition:all 0.3s ease;
+        }}
+        .metric-card:hover {{
+            transform:translateY(-2px);
+            box-shadow:0 8px 24px rgba(0,0,0,0.1);
+        }}
+    </style>
+</head>
+<body>
+<div class="w-[1280px] h-[720px] bg-white relative">
+  <div class="h-24 gradient-header px-12 py-6 flex justify-between items-center shadow-2xl relative z-10">
+    <div>
+      <div class="inline-block px-4 py-1.5 bg-blue-400 bg-opacity-20 rounded-full mb-2 border border-blue-300 border-opacity-30">
+        <span class="text-blue-100 font-bold text-xs tracking-widest">COMPARATIVE ANALYSIS</span>
+      </div>
+      <h1 class="text-3xl font-black text-white">Business Health Dashboard</h1>
+    </div>
+    <div class="flex items-center space-x-3">
+      <div class="w-11 h-11 bg-white bg-opacity-20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        </svg>
+      </div>
+      <span class="text-lg font-bold text-white">Financial Analysis</span>
+    </div>
+    <div class="absolute top-6 right-20 w-4 h-4 bg-cyan-400 rounded-full" style="animation:pulse-glow 2s ease-in-out infinite"></div>
+    <div class="absolute bottom-6 left-32 w-3 h-3 bg-blue-400 rounded-full opacity-60"></div>
+  </div>
+
+  <div class="flex h-[calc(100%-96px)]">
+    <!-- LEFT SIDE: FINANCIAL PERFORMANCE -->
+    <div class="w-[55%] p-8 bg-gradient-to-br from-gray-50 to-blue-50 animate-slide-in">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <div class="inline-block px-3 py-1.5 glass-card rounded-lg mb-2 shadow-md">
+            <span class="text-xs font-bold tracking-wide text-blue-600">FINANCIAL METRICS</span>
+          </div>
+          <h3 class="text-xl font-black text-gray-800">Performance Summary</h3>
+        </div>
+        <div class="flex space-x-2">
+          <div class="flex items-center space-x-2 px-4 py-2 glass-card rounded-xl shadow-md">
+            <div class="w-3 h-3 rounded-full bg-gradient-to-r from-blue-500 to-blue-600"></div>
+            <span class="text-xs font-bold text-gray-700">{period1_label}</span>
+          </div>
+          <div class="flex items-center space-x-2 px-4 py-2 glass-card rounded-xl shadow-md">
+            <div class="w-3 h-3 rounded-full bg-gradient-to-r from-cyan-400 to-cyan-500"></div>
+            <span class="text-xs font-bold text-gray-700">{period2_label}</span>
+          </div>
+        </div>
+      </div>
+      <div class="h-[340px] glass-card rounded-2xl shadow-lg p-5 mb-4 animate-slide-in delay-1">
+        <canvas id="barChart"></canvas>
+      </div>
+      <div class="grid grid-cols-5 gap-2 animate-slide-in delay-2">
+        {financial_cards_html}
+      </div>
+    </div>
+
+    <!-- RIGHT SIDE: OPERATIONAL EFFICIENCY -->
+    <div class="w-[45%] p-6 bg-white animate-slide-in delay-1">
+      <div class="mb-4">
+        <div class="inline-block px-3 py-1.5 rounded-lg mb-2 shadow-md bg-gradient-to-r from-cyan-500 to-blue-600">
+          <span class="text-xs font-bold tracking-wide text-white">OPERATIONAL EFFICIENCY</span>
+        </div>
+        <h3 class="text-xl font-black text-gray-800">Working Capital</h3>
+      </div>
+
+      <div class="h-[170px] glass-card rounded-2xl shadow-lg p-4 mb-3 animate-slide-in delay-2">
+        <canvas id="lineChart"></canvas>
+      </div>
+
+      <div class="space-y-2.5 animate-slide-in delay-3">
+        {operational_cards_html}
+      </div>
+    </div>
+  </div>
+  <div class="absolute bottom-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-cyan-400 to-blue-600"></div>
+</div>
+
+<script>
+// Wait for Chart.js to load
+window.addEventListener('load', function() {{
+  setTimeout(function() {{
+// Set Chart.js defaults for high quality
+Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+Chart.defaults.plugins.legend.labels.usePointStyle = true;
+
+// Financial metrics data
+const financial_data = {json.dumps(financial_data_json)};
+
+// Bar Chart - Financial Performance
+const barCtx = document.getElementById('barChart').getContext('2d');
+new Chart(barCtx, {{
+  type: 'bar',
+  data: {{
+    labels: financial_data['metrics'],
+    datasets: [
+      {{
+        label: '{period1_label}',
+        data: financial_data['period1'],
+        backgroundColor: function(context) {{
+          const chart = context.chart;
+          const {{ctx, chartArea}} = chart;
+          if (!chartArea) return '#2563eb';
+          const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+          gradient.addColorStop(0, '#3b82f6');
+          gradient.addColorStop(1, '#2563eb');
+          return gradient;
+        }},
+        borderColor: '#1e40af',
+        borderWidth: 0,
+        borderRadius: 8,
+        barThickness: 32
+      }},
+      {{
+        label: '{period2_label}',
+        data: financial_data['period2'],
+        backgroundColor: function(context) {{
+          const chart = context.chart;
+          const {{ctx, chartArea}} = chart;
+          if (!chartArea) return '#06b6d4';
+          const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+          gradient.addColorStop(0, '#22d3ee');
+          gradient.addColorStop(1, '#06b6d4');
+          return gradient;
+        }},
+        borderColor: '#0891b2',
+        borderWidth: 0,
+        borderRadius: 8,
+        barThickness: 32
+      }}
+    ]
+  }},
+  options: {{
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {{
+      legend: {{
+        display: false
+      }},
+      tooltip: {{
+        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+        padding: 14,
+        titleFont: {{ size: 14, weight: 'bold' }},
+        bodyFont: {{ size: 13 }},
+        cornerRadius: 8,
+        displayColors: true,
+        usePointStyle: true,
+        callbacks: {{
+          label: function(context) {{
+            return context.dataset.label + ': $' + context.parsed.y.toLocaleString();
+          }}
+        }}
+      }}
+    }},
+    scales: {{
+      y: {{
+        beginAtZero: true,
+        grid: {{
+          color: 'rgba(0, 0, 0, 0.04)',
+          lineWidth: 1
+        }},
+        ticks: {{
+          callback: function(value) {{ return '$' + (value/1000) + 'K'; }},
+          font: {{ size: 12, weight: '600' }},
+          color: '#64748b'
+        }},
+        border: {{ display: false }}
+      }},
+      x: {{
+        grid: {{ display: false }},
+        ticks: {{ 
+          font: {{ size: 12, weight: '600' }},
+          color: '#64748b'
+        }},
+        border: {{ display: false }}
+      }}
+    }}
+  }}
+}});
+
+// Line Chart - Operational Efficiency Trends
+const operational_data = {json.dumps(operational_data_json)};
+const lineCtx = document.getElementById('lineChart').getContext('2d');
+new Chart(lineCtx, {{
+  type: 'line',
+  data: {{
+    labels: ['{period1_label}', '{period2_label}'],
+    datasets: operational_data['metrics'].map((metric, index) => ({{
+      label: metric,
+      data: [operational_data['period1'][index], operational_data['period2'][index]],
+      borderColor: ['#2563eb', '#06b6d4', '#8b5cf6'][index % 3],
+      backgroundColor: ['rgba(37, 99, 235, 0.1)', 'rgba(6, 182, 212, 0.1)', 'rgba(139, 92, 246, 0.1)'][index % 3],
+      borderWidth: 3,
+      pointRadius: 6,
+      pointBackgroundColor: ['#2563eb', '#06b6d4', '#8b5cf6'][index % 3],
+      pointBorderColor: '#fff',
+      pointBorderWidth: 3,
+      pointHoverRadius: 8,
+      tension: 0.4,
+      fill: true
+    }}))
+  }},
+  options: {{
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {{
+      legend: {{
+        display: true,
+        position: 'bottom',
+        labels: {{ 
+          font: {{ size: 11, weight: 'bold' }},
+          padding: 12,
+          usePointStyle: true,
+          pointStyle: 'circle'
+        }}
+      }},
+      tooltip: {{
+        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+        padding: 14,
+        titleFont: {{ size: 13, weight: 'bold' }},
+        bodyFont: {{ size: 12 }},
+        cornerRadius: 8,
+        displayColors: true,
+        usePointStyle: true,
+        callbacks: {{
+          label: function(context) {{
+            return context.dataset.label + ': ' + context.parsed.y + ' days';
+          }}
+        }}
+      }}
+    }},
+    scales: {{
+      y: {{
+        beginAtZero: true,
+        grid: {{
+          color: 'rgba(0, 0, 0, 0.04)',
+          lineWidth: 1
+        }},
+        ticks: {{
+          callback: function(value) {{ return value + ' days'; }},
+          font: {{ size: 11, weight: '600' }},
+          color: '#64748b'
+        }},
+        border: {{ display: false }}
+      }},
+      x: {{
+        grid: {{ display: false }},
+        ticks: {{ 
+          font: {{ size: 11, weight: '600' }},
+          color: '#64748b'
+        }},
+        border: {{ display: false }}
+      }}
+    }}
+  }}
+}});
+
+  }}, 500);
+}});
+</script>
+</body></html>"""
+
+
 def generate_comparison_html_with_real_charts(data):
     """Generate comparison slide with REAL bar charts from TSX data."""
     # Extract comparison data from TSX chart_data
