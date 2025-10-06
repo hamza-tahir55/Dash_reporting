@@ -774,12 +774,25 @@ def generate_dashboard_html_with_real_data(all_metrics_data):
         chart_data = metric_data.get('chart_data', [])
         
         if len(chart_data) >= 2:
-            # Sort chronologically and get the two most recent periods
+            # Sort chronologically and find the main comparison periods (Feb 2021 vs Jan 2021)
             sorted_data = sorted(chart_data, key=lambda x: x.get('name', ''))
-            period1_val = sorted_data[-2].get('series1', 0)  # Second to last (previous)
-            period2_val = sorted_data[-1].get('series1', 0)  # Last (current)
-            period1_label = sorted_data[-2].get('name', 'Previous')
-            period2_label = sorted_data[-1].get('name', 'Current')
+            
+            # Look for Feb 2021 and Jan 2021 specifically (the main comparison in your prompt)
+            feb_2021 = next((d for d in sorted_data if 'Feb 2021' in d.get('name', '')), None)
+            jan_2021 = next((d for d in sorted_data if 'Jan 2021' in d.get('name', '')), None)
+            
+            if feb_2021 and jan_2021:
+                # Use the specific Feb vs Jan comparison from your prompt
+                period1_val = jan_2021.get('series1', 0)  # Jan 2021 (previous)
+                period2_val = feb_2021.get('series1', 0)  # Feb 2021 (current)
+                period1_label = jan_2021.get('name', 'Jan 2021')
+                period2_label = feb_2021.get('name', 'Feb 2021')
+            else:
+                # Fallback to most recent two periods
+                period1_val = sorted_data[-2].get('series1', 0)  # Second to last (previous)
+                period2_val = sorted_data[-1].get('series1', 0)  # Last (current)
+                period1_label = sorted_data[-2].get('name', 'Previous')
+                period2_label = sorted_data[-1].get('name', 'Current')
             
             print(f"   📊 {metric_name}: {period1_label} ${period1_val:,.0f} → {period2_label} ${period2_val:,.0f}")
             

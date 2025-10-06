@@ -67,7 +67,13 @@ class FinancialTSXGenerator:
         Returns:
             Parsed financial data in JSON format
         """
-        system_prompt = """You are a financial data analyst. Parse the financial text and extract structured data for TSX slide generation.
+        system_prompt = """You are a financial data analyst specializing in comprehensive metric extraction. Parse the financial text and extract structured data for TSX slide generation.
+
+CRITICAL: Extract ALL metrics mentioned including:
+- FINANCIAL METRICS: Income, Revenue, Gross Profit, EBITDA, Net Income, Cost of Sales, Operating Expenses
+- OPERATIONAL METRICS: Customer Collection Days, Supplier Payment Days, Inventory Days, Average Invoice Value
+
+Do not miss ANY metrics. If a metric has numbers, extract it.
 
 Return ONLY valid JSON with this structure:
 {
@@ -116,11 +122,12 @@ Return ONLY valid JSON with this structure:
 {financial_text}
 
 CRITICAL INSTRUCTIONS:
-1. Find EVERY metric mentioned (Income, Gross Profit, EBITDA, Cost of Sales, Customer Collection Days, etc.)
-2. For EACH metric, extract ALL values with their time periods
+1. Find EVERY metric mentioned (Income, Gross Profit, EBITDA, Cost of Sales, Customer Collection Days, Supplier Payment Days, Inventory Days, Operating Expenses, etc.)
+2. For EACH metric, extract ALL values with their time periods - INCLUDE OPERATIONAL METRICS LIKE DAYS
 3. Create separate chart_data arrays for each metric with ALL data points
 4. **SORT all chart_data arrays by date in CHRONOLOGICAL ORDER (oldest to newest)**
 5. **EXTRACT ROOT CAUSES**: Include any explanations, reasons, or contextual factors mentioned in the text (e.g., "due to Customer A invoices", "because of new customer acquisition", "margin pressure", etc.)
+6. **OPERATIONAL METRICS**: Pay special attention to metrics like "Collection Days", "Payment Days", "Inventory Days" - these are crucial for working capital analysis
 
 EXAMPLE from text "Income $88,912 in Feb 2021 vs $84,629 in Jan 2021":
 - Income metric chart_data: [
@@ -134,6 +141,14 @@ EXAMPLE from text "Gross Profit $36,251 vs $40,371":
     {{"name": "Period 1", "series1": 40371, "series2": 0, "series3": 0}},
     {{"name": "Period 2", "series1": 36251, "series2": 0, "series3": 0}}
   ]
+
+EXAMPLE from text "Customer Collection Days 45.3 vs 65.5 (Feb 2021 vs Jan 2021)":
+- Customer Collection Days metric chart_data: [
+    {{"name": "Jan 2021", "series1": 65.5, "series2": 0, "series3": 0}},
+    {{"name": "Feb 2021", "series1": 45.3, "series2": 0, "series3": 0}}
+  ]
+
+IMPORTANT: Extract ALL metrics including operational ones like Collection Days, Payment Days, Inventory Days!
 
 RULES:
 - Extract EVERY number mentioned for each metric
