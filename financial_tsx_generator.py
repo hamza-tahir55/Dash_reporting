@@ -70,10 +70,16 @@ class FinancialTSXGenerator:
         system_prompt = """You are a financial data analyst specializing in comprehensive metric extraction. Parse the financial text and extract structured data for TSX slide generation.
 
 CRITICAL: Extract ALL metrics mentioned including:
-- FINANCIAL METRICS: Income, Revenue, Gross Profit, EBITDA, Net Income, Cost of Sales, Operating Expenses
+- FINANCIAL METRICS: Income, Revenue, Gross Profit, EBITDA, Net Income, Cost of Sales, Operating Expenses, Cash Balance, Cash Position
 - OPERATIONAL METRICS: Customer Collection Days, Supplier Payment Days, Inventory Days, Average Invoice Value
 
-Do not miss ANY metrics. If a metric has numbers, extract it.
+MANDATORY METRICS TO ALWAYS LOOK FOR:
+1. Income/Revenue (any income-related numbers)
+2. Gross Profit (profit after cost of sales)
+3. Net Income (final profit after all expenses)
+4. Cash Balance/Cash Position (cash on hand, cash flow)
+
+Do not miss ANY metrics. If a metric has numbers, extract it as a separate metric entry.
 
 Return ONLY valid JSON with this structure:
 {

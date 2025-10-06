@@ -67,12 +67,12 @@ def _filter_to_six_slides(all_files: List[str], output_dir: str) -> List[str]:
     for f in all_files:
         print(f"      - {Path(f).name}")
     
-    # ONLY these 4 metrics get detailed slides (slides 3-6)
-    detailed_metrics = [
-        'Income',           # Slide 3: Income detailed slide
-        'Gross',            # Slide 4: Gross Profit detailed slide  
-        'Net',              # Slide 5: Net Income detailed slide
-        'Cash'              # Slide 6: Cash Balance detailed slide
+    # ONLY these 4 metrics get detailed slides (slides 3-6) - flexible matching
+    detailed_metrics_patterns = [
+        ['Income', 'Revenue'],                    # Slide 3: Income/Revenue detailed slide
+        ['Gross', 'GrossProfit'],                # Slide 4: Gross Profit detailed slide  
+        ['Net', 'NetIncome', 'NetProfit'],       # Slide 5: Net Income detailed slide
+        ['Cash', 'CashBalance', 'CashPosition']  # Slide 6: Cash Balance detailed slide
     ]
     
     selected_files = []
@@ -91,23 +91,42 @@ def _filter_to_six_slides(all_files: List[str], output_dir: str) -> List[str]:
             print(f"   ✅ Slide 2: {Path(file).name} (Business Health Dashboard)")
             break
     
-    # Slides 3-6: Only the 4 specific detailed metrics
-    for i, pattern in enumerate(detailed_metrics, 3):
+    # Slides 3-6: Only the 4 specific detailed metrics (flexible matching)
+    for i, pattern_group in enumerate(detailed_metrics_patterns, 3):
+        found = False
         for file in all_files:
-            if pattern in Path(file).name and file not in selected_files:
-                selected_files.append(file)
-                print(f"   ✅ Slide {i}: {Path(file).name} (Detailed {pattern})")
-                break
-        else:
-            print(f"   ⚠️  Slide {i}: No {pattern} metric found - will be skipped")
+            file_name = Path(file).name
+            if file not in selected_files:
+                # Check if any pattern in the group matches
+                for pattern in pattern_group:
+                    if pattern in file_name:
+                        selected_files.append(file)
+                        print(f"   ✅ Slide {i}: {file_name} (Detailed {pattern_group[0]})")
+                        found = True
+                        break
+                if found:
+                    break
+        if not found:
+            print(f"   ⚠️  Slide {i}: No {pattern_group[0]} metric found - will be skipped")
     
     # Log which metrics will be dashboard-only
     dashboard_metrics = []
     for file in all_files:
         file_name = Path(file).name
-        if not any(pattern in file_name for pattern in ['Title', 'Dashboard'] + detailed_metrics):
-            if not any(excluded in file_name for excluded in ['Title', 'Dashboard']):
-                dashboard_metrics.append(file_name)
+        is_detailed = False
+        
+        # Check if this file matches any detailed metric pattern
+        for pattern_group in detailed_metrics_patterns:
+            for pattern in pattern_group:
+                if pattern in file_name:
+                    is_detailed = True
+                    break
+            if is_detailed:
+                break
+        
+        # If not detailed and not title/dashboard, it's dashboard-only
+        if not is_detailed and not any(excluded in file_name for excluded in ['Title', 'Dashboard']):
+            dashboard_metrics.append(file_name)
     
     if dashboard_metrics:
         print(f"   📊 Dashboard-only metrics ({len(dashboard_metrics)}):")

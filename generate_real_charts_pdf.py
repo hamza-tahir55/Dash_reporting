@@ -746,8 +746,8 @@ def generate_dashboard_html_with_real_data(all_metrics_data):
     """Generate comprehensive dashboard slide with real data from all metrics EXCEPT the 4 detailed ones."""
     print(f"🏢 Generating Business Health Dashboard with {len(all_metrics_data)} metrics")
     
-    # Exclude the 4 metrics that get detailed slides
-    detailed_metrics = ['income', 'gross profit', 'net income', 'cash balance', 'cash']
+    # Exclude ONLY the exact 4 metrics that get detailed slides
+    detailed_metric_names = ['income', 'gross profit', 'net income', 'cash balance', 'cash position']
     
     # Filter out detailed metrics from dashboard
     dashboard_metrics = []
@@ -755,12 +755,20 @@ def generate_dashboard_html_with_real_data(all_metrics_data):
     
     for metric in all_metrics_data:
         metric_name = metric.get('title', '').lower()
-        is_detailed_metric = any(detailed in metric_name for detailed in detailed_metrics)
+        
+        # Only exclude if it's exactly one of the 4 detailed metrics
+        is_detailed_metric = any(
+            detailed_name == metric_name or 
+            (detailed_name in metric_name and len(metric_name.split()) <= 3)  # Avoid over-matching
+            for detailed_name in detailed_metric_names
+        )
         
         if is_detailed_metric:
             excluded_metrics.append(metric.get('title', 'Unknown'))
+            print(f"   🚫 Excluding from dashboard: {metric.get('title', 'Unknown')}")
         else:
             dashboard_metrics.append(metric)
+            print(f"   ✅ Including in dashboard: {metric.get('title', 'Unknown')}")
     
     print(f"   📊 Dashboard metrics: {len(dashboard_metrics)} included")
     print(f"   🎯 Detailed metrics excluded: {excluded_metrics}")
@@ -824,20 +832,30 @@ def generate_dashboard_html_with_real_data(all_metrics_data):
             else:
                 change_pct = 0
             
-            # Categorize metrics
-            if any(keyword in metric_name.lower() for keyword in ['income', 'revenue', 'gross', 'ebitda', 'net', 'expense', 'cost']):
+            # Categorize metrics - be more inclusive
+            metric_lower = metric_name.lower()
+            
+            # Financial metrics (broader matching)
+            if any(keyword in metric_lower for keyword in ['ebitda', 'cost', 'expense', 'sales', 'profit', 'margin']):
                 financial_metrics.append(metric_name)
                 financial_period1.append(period1_val)
                 financial_period2.append(period2_val)
                 financial_changes.append(change_pct)
-            elif any(keyword in metric_name.lower() for keyword in ['collection', 'payment', 'inventory', 'days', 'customer collection', 'supplier payment']):
+                print(f"      💰 Added to financial: {metric_name}")
+            # Operational metrics (days, efficiency, working capital)
+            elif any(keyword in metric_lower for keyword in ['days', 'collection', 'payment', 'inventory', 'turnover', 'cycle']):
                 operational_metrics.append(metric_name)
                 operational_previous.append(period1_val)
                 operational_current.append(period2_val)
                 operational_changes.append(change_pct)
-                print(f"      ✅ Added to operational: {metric_name}")
+                print(f"      ⚙️ Added to operational: {metric_name}")
+            # Other business metrics (default to financial)
             else:
-                print(f"      ⚠️  Uncategorized metric: {metric_name}")
+                financial_metrics.append(metric_name)
+                financial_period1.append(period1_val)
+                financial_period2.append(period2_val)
+                financial_changes.append(change_pct)
+                print(f"      📊 Added to financial (default): {metric_name}")
     
     # Build financial metric cards HTML
     financial_cards_html = ""
