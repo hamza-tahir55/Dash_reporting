@@ -9,7 +9,7 @@ from pathlib import Path
 from datetime import datetime
 import re
 
-from openai_service import OpenAIService
+from openai_service import AIService
 from financial_models import FinancialReportData, TrendAnalysis, PeriodComparison
 
 
@@ -18,7 +18,7 @@ class FinancialTSXGenerator:
     
     def __init__(self):
         """Initialize the TSX generator."""
-        self.openai_service = OpenAIService()
+        self.ai_service = AIService()
     
     def _parse_date(self, date_str: str) -> datetime:
         """Parse date string to datetime for sorting."""
@@ -67,13 +67,11 @@ class FinancialTSXGenerator:
         Returns:
             Parsed financial data in JSON format
         """
-        system_prompt = """You are a financial data analyst specializing in comprehensive metric extraction. Parse the financial text and extract structured data for TSX slide generation.
+        system_prompt = """You are a financial data analyst. Parse financial text and extract structured data for TSX slides.
 
-CRITICAL: Extract ALL metrics mentioned including:
-- FINANCIAL METRICS: Income, Revenue, Gross Profit, EBITDA, Net Income, Cost of Sales, Operating Expenses
-- OPERATIONAL METRICS: Customer Collection Days, Supplier Payment Days, Inventory Days, Average Invoice Value
+EXTRACT ALL METRICS: Income, Revenue, Gross Profit, EBITDA, Net Income, Cost of Sales, Operating Expenses, Customer Collection Days, Supplier Payment Days, Inventory Days, Average Invoice Value.
 
-Do not miss ANY metrics. If a metric has numbers, extract it.
+CRITICAL: Return ONLY valid, well-formed JSON. No trailing commas, no syntax errors.
 
 Return ONLY valid JSON with this structure:
 {
@@ -180,7 +178,13 @@ CRITICAL - Each metric MUST have:
    - **CONTEXTUAL FACTORS**: Customer concentration, operational changes, market conditions mentioned
    Example: "Income increased from $84,629 in Jan 2021 to $30,912 in Feb 2021, representing a -63.5% decline, primarily due to invoices from Customer A and the addition of new Customer B as mentioned in the analysis."
 
-Return complete JSON with ALL metrics and ALL their data points in chronological order."""
+Return complete JSON with ALL metrics and ALL their data points in chronological order.
+
+FINAL CHECK: Ensure your JSON is valid by checking:
+1. No trailing commas
+2. All quotes properly escaped
+3. All brackets properly closed
+4. Valid JSON syntax throughout"""
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -188,10 +192,14 @@ Return complete JSON with ALL metrics and ALL their data points in chronological
         ]
         
         try:
-            response = self.openai_service.generate_completion(messages)
+            import time
+            ai_start = time.time()
+            response = self.ai_service.generate_completion(messages)
+            ai_duration = time.time() - ai_start
             
             # Debug: Print raw response to diagnose parsing issues
             print(f"\n🔍 Raw AI Response (first 200 chars): {response[:200]}...")
+            print(f"⚡ AI Response received in {ai_duration:.2f}s")
             
             # Clean the response - sometimes AI adds extra text
             response = response.strip()
@@ -207,7 +215,34 @@ Return complete JSON with ALL metrics and ALL their data points in chronological
             if json_start != -1 and json_end > json_start:
                 response = response[json_start:json_end]
             
-            parsed_data = json.loads(response)
+            # Enhanced JSON parsing with error recovery
+            try:
+                parsed_data = json.loads(response)
+            except json.JSONDecodeError as json_error:
+                print(f"🔧 JSON parsing failed, attempting to fix common issues...")
+                print(f"   Error: {json_error}")
+                
+                # Common fixes for malformed JSON
+                fixed_response = response
+                
+                # Fix trailing commas
+                import re
+                fixed_response = re.sub(r',(\s*[}\]])', r'\1', fixed_response)
+                
+                # Fix missing commas between objects
+                fixed_response = re.sub(r'}\s*{', '},{', fixed_response)
+                
+                # Fix unescaped quotes in strings
+                fixed_response = re.sub(r'(?<!\\)"(?=[^,}\]]*[,}\]])', r'\\"', fixed_response)
+                
+                # Try parsing again
+                try:
+                    parsed_data = json.loads(fixed_response)
+                    print(f"✅ JSON fixed and parsed successfully!")
+                except json.JSONDecodeError as second_error:
+                    print(f"❌ JSON still invalid after fixes: {second_error}")
+                    print(f"🔍 Problematic JSON (first 500 chars): {fixed_response[:500]}...")
+                    raise json_error  # Raise original error
             
             # Sort chart_data chronologically for each metric
             for metric in parsed_data.get('metrics', []):

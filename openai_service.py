@@ -1,30 +1,44 @@
 """
-OpenAI service module for handling API interactions.
+AI service module for handling API interactions with multiple providers.
+Supports OpenAI and DeepSeek with easy switching.
 """
 from typing import List, Dict, Any, Optional
 from openai import OpenAI
 from config import config
 
 
-class OpenAIService:
-    """Service class for interacting with OpenAI API."""
+class AIService:
+    """Service class for interacting with AI APIs (OpenAI, DeepSeek, etc.)."""
     
     def __init__(self):
-        """Initialize the OpenAI client."""
+        """Initialize the AI client based on configured provider."""
         config.validate()
-        self.client = OpenAI(api_key=config.get_api_key())
-        self.model = config.model
-        # self.temperature = config.temperature
-        # self.max_tokens = config.max_tokens
+        self.provider = config.provider
+        self.model = config.get_model()
+        self.temperature = config.temperature
+        self.max_tokens = config.max_tokens
+        
+        # Initialize client based on provider
+        if self.provider == "openai":
+            self.client = OpenAI(api_key=config.get_api_key())
+            print(f"🤖 Initialized OpenAI client with model: {self.model}")
+        elif self.provider == "deepseek":
+            self.client = OpenAI(
+                api_key=config.get_api_key(),
+                base_url=config.get_base_url()
+            )
+            print(f"🧠 Initialized DeepSeek client with model: {self.model}")
+        else:
+            raise ValueError(f"Unsupported provider: {self.provider}")
     
     def generate_completion(
         self,
         messages: List[Dict[str, str]],
-        # temperature: Optional[float] = None,
-        # max_tokens: Optional[int] = None
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None
     ) -> str:
         """
-        Generate a completion using OpenAI API.
+        Generate a completion using the configured AI provider.
         
         Args:
             messages: List of message dictionaries with 'role' and 'content'
@@ -35,15 +49,38 @@ class OpenAIService:
             Generated text response
         """
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                # temperature=temperature or self.temperature,
-                # max_tokens=max_tokens or self.max_tokens
-            )
+            # Prepare parameters
+            params = {
+                "model": self.model,
+                "messages": messages,
+                "temperature": temperature or self.temperature,
+            }
+            
+            # Add max_tokens only if specified (some models don't support it)
+            if max_tokens or self.max_tokens:
+                params["max_tokens"] = max_tokens or self.max_tokens
+            
+            import time
+            start_time = time.time()
+            print(f"🔄 Generating completion with {self.provider} ({self.model})...")
+            
+            response = self.client.chat.completions.create(**params)
+            
+            end_time = time.time()
+            response_time = end_time - start_time
+            
+            # Log performance metrics
+            if hasattr(response, 'usage') and response.usage:
+                print(f"📊 Token usage: {response.usage.prompt_tokens} input + {response.usage.completion_tokens} output = {response.usage.total_tokens} total")
+                print(f"⚡ Response time: {response_time:.2f}s ({response.usage.total_tokens/response_time:.0f} tokens/sec)")
+            else:
+                print(f"⚡ Response time: {response_time:.2f}s")
+            
             return response.choices[0].message.content
+            
         except Exception as e:
-            raise Exception(f"Error generating completion: {str(e)}")
+            print(f"❌ Error with {self.provider}: {str(e)}")
+            raise Exception(f"Error generating completion with {self.provider}: {str(e)}")
     
     def generate_presentation_content(
         self,

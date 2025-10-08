@@ -137,13 +137,33 @@ async def generate_presentation(request: FinancialDataRequest):
     }
     ```
     """
+    import time
+    
+    # Performance monitoring
+    total_start_time = time.time()
+    step_times = {}
+    
+    def log_step(step_name: str, start_time: float):
+        duration = time.time() - start_time
+        step_times[step_name] = duration
+        print(f"⏱️  {step_name}: {duration:.2f}s")
+        return time.time()
+    
     try:
-        # Create temporary directory for this request
+        print(f"\n{'='*60}")
+        print(f"🚀 STARTING PRESENTATION GENERATION")
+        print(f"📝 Financial text length: {len(request.financial_text)} characters")
+        # print(f"🤖 AI Provider: {config.provider}")
+        print(f"{'='*60}")
+        
+        # Step 1: Setup
+        step_start = time.time()
         temp_dir = tempfile.mkdtemp()
         output_dir = os.path.join(temp_dir, "slides")
         os.makedirs(output_dir, exist_ok=True)
+        step_start = log_step("1. Setup & Directory Creation", step_start)
         
-        # Step 1: Parse financial data and generate TSX slides
+        # Step 2: AI Processing - Parse financial data
         print(f"📊 Generating TSX slides...")
         generator = FinancialTSXGenerator()
         
@@ -152,6 +172,7 @@ async def generate_presentation(request: FinancialDataRequest):
             financial_text=request.financial_text,
             output_dir=output_dir
         )
+        step_start = log_step("2. AI Processing & Data Extraction", step_start)
         
         # DEBUG: Print what AI extracted
         print(f"\n{'='*60}")
@@ -169,7 +190,7 @@ async def generate_presentation(request: FinancialDataRequest):
             print(f"   Check if financial_text is being sent correctly.")
         print(f"{'='*60}\n")
         
-        # Generate actual TSX files from parsed data
+        # Step 3: TSX File Generation
         from pathlib import Path as PathLib
         output_path = PathLib(output_dir)
         all_tsx_files = []
@@ -232,15 +253,17 @@ export default BusinessDashboardSlide;'''
             all_tsx_files.append(comp_file)
         
         print(f"\n✅ Generated {len(all_tsx_files)} TSX slide components!")
+        step_start = log_step("3. TSX File Generation", step_start)
         
-        # Step 1.5: Organize slides - include all extracted metrics
+        # Step 4: Organize slides - include all extracted metrics
         print(f"🎯 Organizing slides for all extracted metrics...")
         tsx_files = _filter_to_ten_slides(all_tsx_files, output_dir)
+        step_start = log_step("4. Slide Organization", step_start)
         
         if not tsx_files:
             raise HTTPException(status_code=500, detail="Failed to generate TSX slides")
         
-        # Step 2: Generate PDF from TSX slides
+        # Step 5: Generate PDF from TSX slides
         print(f"📄 Generating PDF...")
         pdf_output = os.path.join(temp_dir, "presentation.pdf")
         
@@ -248,16 +271,20 @@ export default BusinessDashboardSlide;'''
         sorted_files = [Path(f) for f in tsx_files]
         
         # Generate PDFs using async Playwright
+        browser_start = time.time()
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
             page = await browser.new_page(viewport={"width": 1280, "height": 720}, device_scale_factor=2)
             pdf_files = []
             
-            for tsx_file in sorted_files:
+            print(f"🌐 Browser initialized in {time.time() - browser_start:.2f}s")
+            
+            for i, tsx_file in enumerate(sorted_files, 1):
+                slide_start = time.time()
                 data = parse_tsx_with_data(tsx_file)
                 
                 # Debug: Print parsed data
-                print(f"📊 Slide: {tsx_file.name}")
+                print(f"📊 Processing Slide {i}/{len(sorted_files)}: {tsx_file.name}")
                 print(f"   Title: {data.get('title', 'N/A')}")
                 print(f"   Chart Data Points: {len(data.get('chart_data', []))}")
                 if data.get('chart_data'):
@@ -286,9 +313,12 @@ export default BusinessDashboardSlide;'''
                 else:
                     html = generate_statistic_html_with_real_chart(data)
                 
+                html_start = time.time()
                 await page.set_content(html)
                 await page.wait_for_load_state('networkidle')
+                print(f"   📄 HTML loaded in {time.time() - html_start:.2f}s")
                 
+                render_start = time.time()
                 if data['type'] != 'title' and 'Dashboard' not in tsx_file.name:
                     await page.wait_for_timeout(6000)
                     await page.wait_for_selector('canvas', timeout=15000)
@@ -298,7 +328,9 @@ export default BusinessDashboardSlide;'''
                     await page.wait_for_selector('canvas', timeout=20000)
                 else:
                     await page.wait_for_timeout(1000)
+                print(f"   🎨 Chart rendering in {time.time() - render_start:.2f}s")
                 
+                pdf_start = time.time()
                 slide_pdf = os.path.join(temp_dir, f"slide_{len(pdf_files)}.pdf")
                 await page.pdf(
                     path=slide_pdf,
@@ -308,17 +340,23 @@ export default BusinessDashboardSlide;'''
                     prefer_css_page_size=True
                 )
                 pdf_files.append(slide_pdf)
+                print(f"   📑 PDF generation in {time.time() - pdf_start:.2f}s")
+                print(f"   ✅ Total slide time: {time.time() - slide_start:.2f}s")
             
             await browser.close()
         
-        # Merge PDFs
+        step_start = log_step("5. PDF Generation (Browser)", step_start)
+        
+        # Step 6: Merge PDFs
+        merge_start = time.time()
         merger = PdfMerger()
         for pdf_file in pdf_files:
             merger.append(pdf_file)
         merger.write(pdf_output)
         merger.close()
+        step_start = log_step("6. PDF Merging", step_start)
         
-        # Check if PDF was created
+        # Step 7: File Operations
         if not os.path.exists(pdf_output):
             raise HTTPException(status_code=500, detail="PDF file not created")
         
@@ -333,9 +371,24 @@ export default BusinessDashboardSlide;'''
         
         # Clean up temp directory
         shutil.rmtree(temp_dir, ignore_errors=True)
+        step_start = log_step("7. File Operations & Cleanup", step_start)
+        
+        # Final Performance Summary
+        total_time = time.time() - total_start_time
+        print(f"\n{'='*60}")
+        print(f"🎯 PERFORMANCE SUMMARY")
+        print(f"{'='*60}")
+        for step, duration in step_times.items():
+            percentage = (duration / total_time) * 100
+            print(f"⏱️  {step}: {duration:.2f}s ({percentage:.1f}%)")
+        print(f"{'='*60}")
+        print(f"🏁 TOTAL TIME: {total_time:.2f}s")
+        print(f"📊 Slides generated: {len(sorted_files)}")
+        # print(f"💰 Provider: {config.provider}")
+        print(f"{'='*60}\n")
         
         return GeneratePDFResponse(
-            message="PDF generated successfully",
+            message=f"PDF generated successfully in {total_time:.2f}s",
             pdf_url=f"/download/{final_pdf.name}",
             slides_count=len(sorted_files)
         )
