@@ -246,11 +246,11 @@ export default BusinessDashboardSlide;'''
             stat_file = generator._generate_statistic_slide(metric, output_path)
             all_tsx_files.append(stat_file)
         
-        # Generate comparison slide if data exists
-        if parsed_data.get("comparisons"):
-            print("📈 Generating Comparison Slide...")
-            comp_file = generator._generate_dual_chart_slide(parsed_data["comparisons"], output_path)
-            all_tsx_files.append(comp_file)
+        # Generate comparison slide if data exists (DISABLED)
+        # if parsed_data.get("comparisons"):
+        #     print("📈 Generating Comparison Slide...")
+        #     comp_file = generator._generate_dual_chart_slide(parsed_data["comparisons"], output_path)
+        #     all_tsx_files.append(comp_file)
         
         print(f"\n✅ Generated {len(all_tsx_files)} TSX slide components!")
         step_start = log_step("3. TSX File Generation", step_start)
