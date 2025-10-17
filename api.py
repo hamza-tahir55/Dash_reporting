@@ -60,26 +60,24 @@ class GeneratePDFResponse(BaseModel):
 
 
 def _filter_to_ten_slides(all_files: List[str], output_dir: str) -> List[str]:
-    """Include all generated slides - one for each extracted metric."""
+    """Organize slides with specific flow: Title -> Dashboard -> Income -> Gross Profit -> Net Income -> Cash Balance."""
     from pathlib import Path
     
     print(f"   📋 All generated files:")
     for f in all_files:
         print(f"      - {Path(f).name}")
     
-    # Priority order for organizing slides (Title first, Dashboard second, then all metrics)
+    # New priority order: Title, Dashboard (excluding priority metrics), then 4 priority metrics
+    priority_metrics = ['Income', 'Gross', 'Net', 'Cash']  # These get individual slides
+    
+    # Priority order for organizing slides
     slide_priority = [
         'Title',                    # 1. Title slide (always first)
-        'Dashboard',                # 2. Business Health Dashboard (summary)
-        'Income',                   # 3. Income/Revenue
-        'Cost',                     # 4. Cost of Sales
-        'Gross',                    # 5. Gross Profit
-        'EBITDA',                   # 6. EBITDA
-        'Net',                      # 7. Net Income
-        'Expense',                  # 8. Operating Expenses
-        'Collection',               # 9. Customer Collection Days
-        'Payment',                  # 10. Supplier Payment Days
-        'Inventory'                 # 11. Inventory Days
+        'Dashboard',                # 2. Business Health Dashboard (excluding priority metrics)
+        'Income',                   # 3. Income/Revenue (individual slide)
+        'Gross',                    # 4. Gross Profit (individual slide)
+        'Net',                      # 5. Net Income (individual slide)
+        'Cash',                     # 6. Cash Balance (individual slide)
     ]
     
     selected_files = []
@@ -93,12 +91,21 @@ def _filter_to_ten_slides(all_files: List[str], output_dir: str) -> List[str]:
                 break
     
     # Then add any remaining slides that weren't matched by priority patterns
+    # (but skip the priority metrics since they already have individual slides)
     for file in all_files:
         if file not in selected_files:
-            selected_files.append(file)
-            print(f"   ✅ Slide {len(selected_files)}: {Path(file).name} (additional metric)")
+            file_name = Path(file).name
+            # Skip if this file contains any of the priority metrics (they already have individual slides)
+            is_priority_metric = any(metric in file_name for metric in priority_metrics)
+            if not is_priority_metric:
+                selected_files.append(file)
+                print(f"   ✅ Slide {len(selected_files)}: {Path(file).name} (additional metric)")
     
-    print(f"   📊 Including ALL {len(selected_files)} slides from {len(all_files)} generated")
+    # Limit to only 6 slides as requested
+    selected_files = selected_files[:6]
+    
+    print(f"   📊 Including {len(selected_files)} slides from {len(all_files)} generated")
+    print(f"   🎯 Flow: Title -> Dashboard (other KPIs) -> Income -> Gross Profit -> Net Income -> Cash Balance")
     
     return selected_files
 
@@ -163,16 +170,23 @@ async def generate_presentation(request: FinancialDataRequest):
         os.makedirs(output_dir, exist_ok=True)
         step_start = log_step("1. Setup & Directory Creation", step_start)
         
-        # Step 2: AI Processing - Parse financial data
-        print(f"📊 Generating TSX slides...")
+        # Step 2: DeepSeek Preprocessing - Clean and structure the input text
+        print(f"🧠 DeepSeek preprocessing input text...")
         generator = FinancialTSXGenerator()
         
-        # This returns parsed JSON data, not file paths
+        # First stage: DeepSeek processes the raw input text
+        preprocessed_text = generator.preprocess_with_deepseek(request.financial_text)
+        step_start = log_step("2. DeepSeek Text Preprocessing", step_start)
+        
+        # Step 3: AI Processing - Parse the preprocessed financial data
+        print(f"📊 Generating TSX slides from preprocessed text...")
+        
+        # Second stage: Use the preprocessed text for slide generation
         parsed_data = generator.generate_financial_slides(
-            financial_text=request.financial_text,
+            financial_text=preprocessed_text,
             output_dir=output_dir
         )
-        step_start = log_step("2. AI Processing & Data Extraction", step_start)
+        step_start = log_step("3. AI Processing & Data Extraction", step_start)
         
         # DEBUG: Print what AI extracted
         print(f"\n{'='*60}")
@@ -190,7 +204,7 @@ async def generate_presentation(request: FinancialDataRequest):
             print(f"   Check if financial_text is being sent correctly.")
         print(f"{'='*60}\n")
         
-        # Step 3: TSX File Generation
+        # Step 4: TSX File Generation
         from pathlib import Path as PathLib
         output_path = PathLib(output_dir)
         all_tsx_files = []
@@ -301,9 +315,11 @@ export default BusinessDashboardSlide;'''
                     data['date'] = request.presentation_date or datetime.now().strftime("%B %Y")
                     html = generate_title_html(data)
                 elif 'Dashboard' in tsx_file.name:
-                    # Generate dashboard slide with all metrics data
+                    # Generate dashboard slide with all metrics data from ALL generated files
                     all_metrics_data = []
-                    for f in sorted_files:
+                    # Use all_tsx_files instead of sorted_files to get complete data for dashboard
+                    all_tsx_paths = [Path(f) for f in all_tsx_files]
+                    for f in all_tsx_paths:
                         if f.name != tsx_file.name and 'Title' not in f.name and 'Dashboard' not in f.name:
                             metric_data = parse_tsx_with_data(f)
                             all_metrics_data.append(metric_data)

@@ -53,6 +53,69 @@ class FinancialTSXGenerator:
             print(f"   ⚠️  Could not sort dates: {e}")
             return chart_data
     
+    def preprocess_with_deepseek(self, raw_financial_text: str) -> str:
+        """
+        First stage: Use DeepSeek to preprocess and clean the raw financial text.
+        This makes the text more structured and easier to parse in the second stage.
+        
+        Args:
+            raw_financial_text: Raw, unstructured financial text
+        Returns:
+            Cleaned and structured financial text ready for metric extraction
+        """
+        preprocessing_prompt = """You are a financial text preprocessor. Your job is to clean, structure, and organize raw financial text to make it easier to extract specific KPIs.
+
+ONLY extract and structure data for these 10 KPIs:
+1. Income (Revenue/Sales)
+2. Cost of Sale (COGS/Cost of Goods Sold)
+3. Expenses (Operating Expenses)
+4. Gross Profit
+5. EBITDA
+6. Net Income
+7. Cash Balance
+8. Customer Collection Days
+9. Supplier Payment Days
+10. Inventory Days
+
+For each KPI found in the text:
+- Extract the KPI name, values, and time periods that are in Period over period only
+- Show increase/decrease between periods
+- Organize chronologically
+- Standardize names (e.g., "Revenue" → "Income", "COGS" → "Cost of Sale")
+- Make numerical values and dates clear
+- Include any explanations or context mentioned
+
+Ignore all other metrics not in the above list. Return only the cleaned, structured data for these 7 KPIs."""
+
+        user_prompt = f"""Clean and structure this raw financial text:
+
+{raw_financial_text}
+
+Return the cleaned, well-organized version that preserves all financial data but makes it easier to extract metrics from."""
+
+        messages = [
+            {"role": "system", "content": preprocessing_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        
+        try:
+            import time
+            preprocess_start = time.time()
+            response = self.ai_service.generate_completion(messages)
+            preprocess_duration = time.time() - preprocess_start
+            
+            print(f"🧠 DeepSeek preprocessing completed in {preprocess_duration:.2f}s")
+            print(f"📝 Original text length: {len(raw_financial_text)} chars")
+            print(f"📝 Preprocessed text length: {len(response)} chars")
+            print(f"🔍 Preprocessed text preview: {response}")
+            
+            return response
+            
+        except Exception as e:
+            print(f"❌ DeepSeek preprocessing failed: {str(e)}")
+            print("🔄 Falling back to original text...")
+            return raw_financial_text
+
     def generate_financial_slides(
         self,
         financial_text: str,
@@ -69,36 +132,29 @@ class FinancialTSXGenerator:
         """
         system_prompt = """You are a financial data analyst. Parse financial text and extract structured data for TSX slides.
 
-EXTRACT ALL METRICS: Income, Revenue, Gross Profit, EBITDA, Net Income, Cost of Sales, Operating Expenses, Customer Collection Days, Supplier Payment Days, Inventory Days, Average Invoice Value.
-
-CRITICAL: Return ONLY valid, well-formed JSON. No trailing commas, no syntax errors.
+Extract metrics: Income, Revenue, Gross Profit, EBITDA, Net Income, Cost of Sales, Operating Expenses, Collection Days, Payment Days, Inventory Days.
 
 Return ONLY valid JSON with this structure:
 {
     "title": "Financial Analysis Report",
-    "subtitle": "May 2019 to Sep 2024",
-    "date": "September 2024",
+    "subtitle": "Period Range",
+    "date": "Current Date",
     "metrics": [
         {
             "name": "Income",
             "value": "$155,815",
             "label": "Peak Revenue (Dec 2020)",
-            "description": "Income shows significant volatility...",
             "kpis": {
                 "vs_previous": {"pct": -44.6, "from": 9384, "to": 5200},
-                "yoy": {"pct": 25.3, "from": 4150, "to": 5200},
                 "previous_label": "Aug 2024",
                 "latest_label": "Sep 2024"
             },
             "bullet_points": [
-                "Income reached its highest point in December 2020 at $155,815, representing a significant peak in revenue generation during this period.",
-                "The average income across the analyzed timeframe is approximately $15,000, indicating substantial volatility around this baseline figure.",
-                "Income increased from $84,629 in Jan 2021 to $30,912 in Feb 2021, primarily driven by invoices from Customer A and the addition of new Customer B as key contributing factors.",
-                "A concerning downward trend emerged recently, with income declining from $9,384 in August 2024 to $5,200 in September 2024, representing a 44.6% month-over-month decrease."
+                "Key insight with specific numbers and trends",
+                "Another insight with root causes if mentioned"
             ],
             "chart_data": [
-                {"name": "May 2019", "series1": 8321, "series2": 0, "series3": 0},
-                {"name": "Dec 2020", "series1": 155815, "series2": 0, "series3": 0}
+                {"name": "May 2019", "series1": 8321, "series2": 0, "series3": 0}
             ]
         }
     ],
@@ -106,85 +162,36 @@ Return ONLY valid JSON with this structure:
         "period1": "Aug 2024",
         "period2": "Sep 2024",
         "bar_chart_data": [
-            {"name": "Income", "series1": 9384, "series2": 5200, "series3": 0},
-            {"name": "Gross Profit", "series1": 9374, "series2": 5097, "series3": 0}
-        ],
-        "area_chart_data": [
-            {"name": "Q1", "series1": 20, "series2": 30, "series3": 15}
+            {"name": "Income", "series1": 9384, "series2": 5200, "series3": 0}
         ]
     }
 }"""
 
-        user_prompt = f"""Parse this financial text and extract EVERY SINGLE number with its date/period:
+        user_prompt = f"""Parse this financial text and extract all metrics with their values and dates:
 
 {financial_text}
 
-CRITICAL INSTRUCTIONS:
-1. Find EVERY metric mentioned (Income, Gross Profit, EBITDA, Cost of Sales, Customer Collection Days, Supplier Payment Days, Inventory Days, Operating Expenses, etc.)
-2. For EACH metric, extract ALL values with their time periods - INCLUDE OPERATIONAL METRICS LIKE DAYS
-3. Create separate chart_data arrays for each metric with ALL data points
-4. **SORT all chart_data arrays by date in CHRONOLOGICAL ORDER (oldest to newest)**
-5. **EXTRACT ROOT CAUSES**: Include any explanations, reasons, or contextual factors mentioned in the text (e.g., "due to Customer A invoices", "because of new customer acquisition", "margin pressure", etc.)
-6. **OPERATIONAL METRICS**: Pay special attention to metrics like "Collection Days", "Payment Days", "Inventory Days" - these are crucial for working capital analysis
+INSTRUCTIONS:
+1. Extract all metrics: Income, Gross Profit, EBITDA, Cost of Sales, Collection Days, Payment Days, Inventory Days, Operating Expenses
+2. For each metric, get all values with time periods
+3. Sort chart_data chronologically (oldest to newest)
+4. Include root causes and explanations from the text
 
-EXAMPLE from text "Income $88,912 in Feb 2021 vs $84,629 in Jan 2021":
-- Income metric chart_data: [
+EXAMPLE: "Income $88,912 in Feb 2021 vs $84,629 in Jan 2021"
+- chart_data: [
     {{"name": "Jan 2021", "series1": 84629, "series2": 0, "series3": 0}},
     {{"name": "Feb 2021", "series1": 88912, "series2": 0, "series3": 0}}
   ]
-  NOTE: Jan 2021 comes BEFORE Feb 2021 (chronological order)
 
-EXAMPLE from text "Gross Profit $36,251 vs $40,371":
-- Gross Profit metric chart_data: [
-    {{"name": "Period 1", "series1": 40371, "series2": 0, "series3": 0}},
-    {{"name": "Period 2", "series1": 36251, "series2": 0, "series3": 0}}
-  ]
+Each metric needs:
+1. "name": Metric name
+2. "value": Latest/most significant value with $
+3. "label": Descriptive label
+4. "chart_data": All data points sorted chronologically
+5. "kpis": Percentage changes with vs_previous and yoy
+6. "bullet_points": 2-3 key insights with numbers, trends, and any root causes mentioned
 
-EXAMPLE from text "Customer Collection Days 45.3 vs 65.5 (Feb 2021 vs Jan 2021)":
-- Customer Collection Days metric chart_data: [
-    {{"name": "Jan 2021", "series1": 65.5, "series2": 0, "series3": 0}},
-    {{"name": "Feb 2021", "series1": 45.3, "series2": 0, "series3": 0}}
-  ]
-
-IMPORTANT: Extract ALL metrics including operational ones like Collection Days, Payment Days, Inventory Days!
-
-RULES:
-- Extract EVERY number mentioned for each metric
-- If dates are given (Jan 2021, Feb 2021), use them as "name"
-- If no dates, use "Period 1", "Period 2", etc.
-- Remove $ and commas from numbers (convert to integers)
-- Create a separate metric entry for EACH different metric mentioned
-- chart_data arrays must NEVER be empty if numbers exist in text
-- **ALWAYS sort chart_data by date chronologically (May 2019, Dec 2020, Jan 2021, Feb 2021, Mar 2021, Apr 2021, etc.)**
-
-CRITICAL - Each metric MUST have:
-1. "name": The metric name (e.g., "Income", "Gross Profit")
-2. "value": The LATEST or MOST SIGNIFICANT value with $ (e.g., "$88,912" or "$10.9 days")
-3. "label": A descriptive label (e.g., "Latest Period (Feb 2021)" or "Current Value")
-4. "chart_data": Array of ALL data points found, **SORTED CHRONOLOGICALLY**
-5. "kpis": Object with calculated percentage changes:
-   - "vs_previous": {{"pct": percentage_change, "from": previous_value, "to": current_value}}
-   - "yoy": {{"pct": year_over_year_percentage, "from": previous_year_value, "to": current_year_value}}
-   - "previous_label": "Jan 2021" (or period name)
-   - "latest_label": "Feb 2021" (or period name)
-   Example: "kpis": {{"vs_previous": {{"pct": -63.5, "from": 84629, "to": 30912}}, "previous_label": "Jan 2021", "latest_label": "Feb 2021"}}
-6. "bullet_points": 3-5 descriptive insights that provide context and analysis. Each bullet point should be 1-2 complete sentences explaining trends, comparisons, or key findings with specific numbers, timeframes, and percentages. **CRITICALLY IMPORTANT**: Include any root causes, explanations, or contextual reasons mentioned in the original text. Include analytical context such as:
-   - Peak/lowest values with dates and amounts
-   - Percentage changes between periods  
-   - Trend direction (increasing/decreasing/volatile)
-   - Comparison to averages or benchmarks
-   - Business implications of the changes
-   - **ROOT CAUSES**: Any explanations provided (e.g., "due to Customer A invoices", "because of new customer acquisition", "margin pressure", "profitability hit")
-   - **CONTEXTUAL FACTORS**: Customer concentration, operational changes, market conditions mentioned
-   Example: "Income increased from $84,629 in Jan 2021 to $30,912 in Feb 2021, representing a -63.5% decline, primarily due to invoices from Customer A and the addition of new Customer B as mentioned in the analysis."
-
-Return complete JSON with ALL metrics and ALL their data points in chronological order.
-
-FINAL CHECK: Ensure your JSON is valid by checking:
-1. No trailing commas
-2. All quotes properly escaped
-3. All brackets properly closed
-4. Valid JSON syntax throughout"""
+Return valid JSON with all metrics and data points."""
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -198,7 +205,7 @@ FINAL CHECK: Ensure your JSON is valid by checking:
             ai_duration = time.time() - ai_start
             
             # Debug: Print raw response to diagnose parsing issues
-            print(f"\n🔍 Raw AI Response (first 200 chars): {response[:200]}...")
+            print(f"\n� Raw AI Response (first 200 chars): {response[:200]}...")
             print(f"⚡ AI Response received in {ai_duration:.2f}s")
             
             # Clean the response - sometimes AI adds extra text
