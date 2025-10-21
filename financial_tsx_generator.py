@@ -158,13 +158,6 @@ Return ONLY valid JSON with this structure:
             ]
         }
     ],
-    "comparisons": {
-        "period1": "Aug 2024",
-        "period2": "Sep 2024",
-        "bar_chart_data": [
-            {"name": "Income", "series1": 9384, "series2": 5200, "series3": 0}
-        ]
-    }
 }"""
 
         user_prompt = f"""Parse this financial text and extract all metrics with their values and dates:
@@ -205,7 +198,7 @@ Return valid JSON with all metrics and data points."""
             ai_duration = time.time() - ai_start
             
             # Debug: Print raw response to diagnose parsing issues
-            print(f"\n� Raw AI Response (first 200 chars): {response[:200]}...")
+            print(f"\n� Raw AI Response (All): {response}")
             print(f"⚡ AI Response received in {ai_duration:.2f}s")
             
             # Clean the response - sometimes AI adds extra text

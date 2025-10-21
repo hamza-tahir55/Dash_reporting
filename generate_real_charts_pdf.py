@@ -203,7 +203,7 @@ body {{
       </div>
     </div>
     <div class="glass-effect px-6 py-2 rounded-full">
-      <span class="text-blue-200 font-semibold text-sm">CONFIDENTIAL</span>
+      <span class="text-blue-200 font-semibold text-sm">{data.get('org_name', 'ORGANIZATION')}</span>
     </div>
   </div>
   
@@ -283,7 +283,7 @@ body {{
         </div>
       </div>
       <div class="flex items-center space-x-3">
-        <div class="text-sm font-bold">{data.get('organization', 'Organization 1')}</div>
+        <div class="text-sm font-bold"></div>
         <div class="w-2 h-2 bg-cyan-400 rounded-full"></div>
         <div class="text-sm opacity-70">Page 1</div>
       </div>
@@ -803,13 +803,13 @@ def generate_dashboard_html_with_real_data(all_metrics_data):
             else:
                 change_pct = 0
             
-            # Categorize metrics - Show OTHER metrics in dashboard (not the 4 priority ones)
+            # Categorize metrics - EXCLUDE main financial KPIs from dashboard
             excluded_main_kpis = ['income', 'gross profit', 'net income', 'cash balance']
             
             if metric_name.lower() in excluded_main_kpis:
                 print(f"      🚫 Excluded main KPI from dashboard: {metric_name}")
                 continue  # Skip these main KPIs for dashboard
-            elif any(keyword in metric_name.lower() for keyword in ['ebitda', 'expense', 'cost', 'revenue', 'sales', 'margin']):
+            elif any(keyword in metric_name.lower() for keyword in ['ebitda', 'expense', 'cost']):
                 financial_metrics.append(metric_name)
                 financial_period1.append(period1_val)
                 financial_period2.append(period2_val)
@@ -822,30 +822,17 @@ def generate_dashboard_html_with_real_data(all_metrics_data):
                 operational_changes.append(change_pct)
                 print(f"      ✅ Added to operational: {metric_name}")
             else:
-                # If no other metrics available, show a summary of the excluded ones for context
-                print(f"      ⚠️  Uncategorized metric: {metric_name} - will show summary instead")
-                financial_metrics.append(metric_name)
-                financial_period1.append(period1_val)
-                financial_period2.append(period2_val)
-                financial_changes.append(change_pct)
+                print(f"      ⚠️  Uncategorized metric: {metric_name}")
     
     # Build financial metric cards HTML
     financial_cards_html = ""
-    if financial_metrics:
-        for i, (metric, change) in enumerate(zip(financial_metrics[:5], financial_changes[:5])):
-            sign = "+" if change >= 0 else ""
-            color = "blue" if i == 0 else ["cyan", "blue", "indigo", "orange"][i % 4]
-            financial_cards_html += f'''
-            <div class="metric-card glass-card rounded-xl p-3 shadow-md text-center border-l-4 border-{color}-600">
-              <div class="text-2xl font-black text-{color}-600">{sign}{change:.1f}%</div>
-              <div class="text-xs font-semibold text-gray-600 mt-1">{metric.replace(' ', '<br>')}</div>
-            </div>'''
-    else:
-        # Show placeholder if no financial metrics available
-        financial_cards_html = '''
-        <div class="glass-card rounded-xl p-4 shadow-md text-center col-span-5">
-          <div class="text-sm text-gray-500 mb-2">📊 Financial Overview</div>
-          <div class="text-xs text-gray-400">Main financial metrics (Income, Gross Profit, Net Income, Cash Balance) are shown on individual slides</div>
+    for i, (metric, change) in enumerate(zip(financial_metrics[:5], financial_changes[:5])):
+        sign = "+" if change >= 0 else ""
+        color = "blue" if i == 0 else ["cyan", "blue", "indigo", "orange"][i % 4]
+        financial_cards_html += f'''
+        <div class="metric-card glass-card rounded-xl p-3 shadow-md text-center border-l-4 border-{color}-600">
+          <div class="text-2xl font-black text-{color}-600">{sign}{change:.1f}%</div>
+          <div class="text-xs font-semibold text-gray-600 mt-1">{metric.replace(' ', '<br>')}</div>
         </div>'''
     
     # Build operational metric cards HTML

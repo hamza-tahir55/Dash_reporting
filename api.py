@@ -50,6 +50,7 @@ class FinancialDataRequest(BaseModel):
     contact_email: Optional[str] = "contact@DashAnalytix.com" # ← Default email
     contact_website: Optional[str] = "www.app.DashAnalytix.com"   # ← Default website
     presentation_date: Optional[str] = None  # Auto-generates current month/year
+    prepared_by: Optional[str] = "Analytics Team"                   # ← Default prepared by
     
 
 class GeneratePDFResponse(BaseModel):
@@ -308,11 +309,12 @@ export default BusinessDashboardSlide;'''
                 if data['type'] == 'title':
                     data['title'] = request.report_title
                     data['subtitle'] = request.report_subtitle
-                    data['org'] = request.organization_name
+                    data['org_name'] = request.organization_name
                     data['phone'] = request.contact_phone
                     data['email'] = request.contact_email
                     data['website'] = request.contact_website
                     data['date'] = request.presentation_date or datetime.now().strftime("%B %Y")
+                    data['prepared_by'] = request.prepared_by
                     html = generate_title_html(data)
                 elif 'Dashboard' in tsx_file.name:
                     # Generate dashboard slide with all metrics data from ALL generated files
