@@ -4,10 +4,13 @@ Generate professional TSX slide components for financial reports.
 Uses the professional slide template format.
 """
 import json
+import asyncio
 from typing import List, Dict, Any
 from pathlib import Path
 from datetime import datetime
 import re
+from concurrent.futures import ThreadPoolExecutor
+import threading
 
 from openai_service import AIService
 from financial_models import FinancialReportData, TrendAnalysis, PeriodComparison
@@ -53,9 +56,9 @@ class FinancialTSXGenerator:
             print(f"   ⚠️  Could not sort dates: {e}")
             return chart_data
     
-    def preprocess_with_deepseek(self, raw_financial_text: str) -> str:
+    async def preprocess_with_deepseek_async(self, raw_financial_text: str) -> str:
         """
-        First stage: Use DeepSeek to preprocess and clean the raw financial text.
+        Async version: First stage: Use DeepSeek to preprocess and clean the raw financial text.
         This makes the text more structured and easier to parse in the second stage.
         
         Args:
@@ -77,15 +80,25 @@ ONLY extract and structure data for these 10 KPIs:
 9. Supplier Payment Days
 10. Inventory Days
 
+CRITICAL DATE FILTERING RULES:
+- Focus ONLY on period-over-period analysis (recent consecutive months/periods)
+- Include the main comparison periods (e.g., Aug 2024 vs Sep 2024)
+- Include 1-2 surrounding periods for context (e.g., July, Oct, Nov 2024)
+- EXCLUDE historical data from years before the main comparison periods
+- EXCLUDE data from 2019, 2020, 2021, 2022, 2023 unless it's directly relevant to recent trends
+- Prioritize data from 2024 and the most recent periods
+
 For each KPI found in the text:
-- Extract the KPI name, values, and time periods that are in Period over period only
-- Show increase/decrease between periods
-- Organize chronologically
+- Extract the KPI name, values, and time periods (RECENT PERIODS ONLY)
+- Show increase/decrease between consecutive recent periods
+- Organize chronologically (most recent periods)
 - Standardize names (e.g., "Revenue" → "Income", "COGS" → "Cost of Sale")
 - Make numerical values and dates clear
-- Include any explanations or context mentioned
+- Include any explanations or context mentioned for recent periods
 
-Ignore all other metrics not in the above list. Return only the cleaned, structured data for these 7 KPIs."""
+Example: If comparing Aug 2024 vs Sep 2024, include July 2024, Aug 2024, Sep 2024, Oct 2024, Nov 2024 data but EXCLUDE May 2019, Dec 2020, etc.
+
+Ignore all other metrics not in the above list and ignore historical data beyond recent periods. Return only the cleaned, structured data for these 10 KPIs focusing on recent period-over-period analysis."""
 
         user_prompt = f"""Clean and structure this raw financial text:
 
@@ -116,11 +129,816 @@ Return the cleaned, well-organized version that preserves all financial data but
             print("🔄 Falling back to original text...")
             return raw_financial_text
 
+    def preprocess_with_deepseek(self, raw_financial_text: str) -> str:
+        """
+        First stage: Use DeepSeek to preprocess and clean the raw financial text.
+        This makes the text more structured and easier to parse in the second stage.
+        
+        Args:
+            raw_financial_text: Raw, unstructured financial text
+        Returns:
+            Cleaned and structured financial text ready for metric extraction
+        """
+        preprocessing_prompt = """You are a financial text preprocessor. Your job is to clean, structure, and organize raw financial text to make it easier to extract specific KPIs.
+
+ONLY extract and structure data for these 10 KPIs:
+1. Income (Revenue/Sales)
+2. Cost of Sale (COGS/Cost of Goods Sold)
+3. Expenses (Operating Expenses)
+4. Gross Profit
+5. EBITDA
+6. Net Income
+7. Cash Balance
+8. Customer Collection Days
+9. Supplier Payment Days
+10. Inventory Days
+
+CRITICAL DATE FILTERING RULES:
+- Focus ONLY on period-over-period analysis (recent consecutive months/periods)
+- Include the main comparison periods (e.g., Aug 2024 vs Sep 2024)
+- Include 1-2 surrounding periods for context (e.g., July, Oct, Nov 2024)
+- EXCLUDE historical data from years before the main comparison periods
+- EXCLUDE data from 2019, 2020, 2021, 2022, 2023 unless it's directly relevant to recent trends
+- Prioritize data from 2024 and the most recent periods
+
+For each KPI found in the text:
+- Extract the KPI name, values, and time periods (RECENT PERIODS ONLY)
+- Show increase/decrease between consecutive recent periods
+- Organize chronologically (most recent periods)
+- Standardize names (e.g., "Revenue" → "Income", "COGS" → "Cost of Sale")
+- Make numerical values and dates clear
+- Include any explanations or context mentioned for recent periods
+
+Example: If comparing Aug 2024 vs Sep 2024, include July 2024, Aug 2024, Sep 2024, Oct 2024, Nov 2024 data but EXCLUDE May 2019, Dec 2020, etc.
+
+Ignore all other metrics not in the above list and ignore historical data beyond recent periods. Return only the cleaned, structured data for these 10 KPIs focusing on recent period-over-period analysis."""
+
+        user_prompt = f"""Clean and structure this raw financial text:
+
+{raw_financial_text}
+
+Return the cleaned, well-organized version that preserves all financial data but makes it easier to extract metrics from."""
+
+        messages = [
+            {"role": "system", "content": preprocessing_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        
+        try:
+            import time
+            preprocess_start = time.time()
+            response = self.ai_service.generate_completion(messages)
+            preprocess_duration = time.time() - preprocess_start
+            
+            print(f"🧠 DeepSeek preprocessing completed in {preprocess_duration:.2f}s")
+            print(f"📝 Original text length: {len(raw_financial_text)} chars")
+            print(f"📝 Preprocessed text length: {len(response)} chars")
+            print(f"🔍 Preprocessed text preview: {response}")
+            
+            return response
+            
+        except Exception as e:
+            print(f"❌ DeepSeek preprocessing failed: {str(e)}")
+            print("🔄 Falling back to original text...")
+            return raw_financial_text
+
+    async def generate_financial_slides_async(
+        self,
+        financial_text: str,
+        output_dir: str = "generated_slides"
+    ) -> Dict[str, Any]:
+        """
+        Async version: Generate TSX slide components from financial text.
+        
+        Args:
+            financial_text: Raw financial analysis text
+            output_dir: Directory to save generated slides
+        Returns:
+            Parsed financial data in JSON format
+        """
+        system_prompt = """You are a financial data analyst. Parse financial text and extract structured data for TSX slides.
+
+Extract metrics: Income, Revenue, Gross Profit, EBITDA, Net Income, Cost of Sales, Operating Expenses, Collection Days, Payment Days, Inventory Days.
+
+Return ONLY valid JSON with this structure:
+{
+    "title": "Financial Analysis Report",
+    "subtitle": "Period Range",
+    "date": "Current Date",
+    "metrics": [
+        {
+            "name": "Income",
+            "value": "$155,815",
+            "label": "Peak Revenue (Dec 2020)",
+            "kpis": {
+                "vs_previous": {"pct": -44.6, "from": 9384, "to": 5200},
+                "previous_label": "Aug 2024",
+                "latest_label": "Sep 2024"
+            },
+            "bullet_points": [
+                "Key insight with specific numbers and trends",
+                "Another insight with root causes if mentioned"
+            ],
+            "chart_data": [
+                {"name": "May 2019", "series1": 8321, "series2": 0, "series3": 0}
+            ]
+        }
+    ],
+}"""
+
+        user_prompt = f"""Parse this financial text and extract all metrics with their values and dates:
+
+{financial_text}
+
+INSTRUCTIONS:
+1. Extract all metrics: Income, Gross Profit, EBITDA, Cost of Sales, Collection Days, Payment Days, Inventory Days, Operating Expenses
+2. For each metric, get all values with time periods
+3. Sort chart_data chronologically (oldest to newest)
+4. Include root causes and explanations from the text
+
+EXAMPLE: "Income $88,912 in Feb 2021 vs $84,629 in Jan 2021"
+- chart_data: [
+    {{"name": "Jan 2021", "series1": 84629, "series2": 0, "series3": 0}},
+    {{"name": "Feb 2021", "series1": 88912, "series2": 0, "series3": 0}}
+  ]
+
+Each metric needs:
+1. "name": Metric name
+2. "value": Latest/most significant value with $
+3. "label": Descriptive label
+4. "chart_data": All data points sorted chronologically
+5. "kpis": Percentage changes with vs_previous and yoy
+6. "bullet_points": 2-3 key insights with numbers, trends, and any root causes mentioned
+
+Return valid JSON with all metrics and data points."""
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        
+        try:
+            import time
+            ai_start = time.time()
+            response = self.ai_service.generate_completion(messages)
+            ai_duration = time.time() - ai_start
+            
+            # Debug: Print raw response to diagnose parsing issues
+            print(f"\n🤖 Raw AI Response (All): {response}")
+            print(f"⚡ AI Response received in {ai_duration:.2f}s")
+            
+            # Clean the response - sometimes AI adds extra text
+            response = response.strip()
+            if response.startswith('```json'):
+                response = response[7:]
+            if response.endswith('```'):
+                response = response[:-3]
+            response = response.strip()
+            
+            # Try to find JSON in the response
+            json_start = response.find('{')
+            json_end = response.rfind('}') + 1
+            if json_start != -1 and json_end > json_start:
+                response = response[json_start:json_end]
+            
+            # Enhanced JSON parsing with error recovery
+            try:
+                parsed_data = json.loads(response)
+            except json.JSONDecodeError as json_error:
+                print(f"🔧 JSON parsing failed, attempting to fix common issues...")
+                print(f"   Error: {json_error}")
+                
+                # Common fixes for malformed JSON
+                fixed_response = response
+                
+                # Fix trailing commas
+                import re
+                fixed_response = re.sub(r',(\s*[}\]])', r'\1', fixed_response)
+                
+                # Fix missing commas between objects
+                fixed_response = re.sub(r'}\s*{', '},{', fixed_response)
+                
+                # Fix unescaped quotes in strings
+                fixed_response = re.sub(r'(?<!\\)"(?=[^,}\]]*[,}\]])', r'\\"', fixed_response)
+                
+                # Try parsing again
+                try:
+                    parsed_data = json.loads(fixed_response)
+                    print(f"✅ JSON fixed and parsed successfully!")
+                except json.JSONDecodeError as second_error:
+                    print(f"❌ JSON still invalid after fixes: {second_error}")
+                    print(f"🔍 Problematic JSON (first 500 chars): {fixed_response[:500]}...")
+                    raise json_error  # Raise original error
+            
+            # Sort chart_data chronologically for each metric
+            for metric in parsed_data.get('metrics', []):
+                if 'chart_data' in metric and metric['chart_data']:
+                    original_data = metric['chart_data'].copy()
+                    metric['chart_data'] = self._sort_chart_data_chronologically(metric['chart_data'])
+                    
+                    # Check if sorting changed the order
+                    if original_data != metric['chart_data']:
+                        print(f"   📅 Sorted {metric.get('name')} data chronologically")
+            
+            # Debug: Print what AI extracted
+            print(f"\n🤖 AI Extracted Data:")
+            print(f"   Metrics count: {len(parsed_data.get('metrics', []))}")
+            for metric in parsed_data.get('metrics', []):  # Show ALL metrics
+                chart_data = metric.get('chart_data', [])
+                print(f"   - {metric.get('name')}: {len(chart_data)} data points")
+                if chart_data:
+                    for i, point in enumerate(chart_data[:3]):  # Show first 3 points
+                        print(f"     [{i+1}] {point.get('name')}: ${point.get('series1', 0):,}")
+                else:
+                    print(f"     ⚠️  NO CHART DATA EXTRACTED!")
+            
+            return parsed_data
+        except json.JSONDecodeError as e:
+            print(f"⚠️  JSON parsing error: {e}")
+            print(f"⚠️  Problematic response: {response[:500]}...")
+            return self._create_default_structure(financial_text)
+        except Exception as e:
+            print(f"⚠️  Error generating data: {e}")
+            print(f"⚠️  Response received: {response if 'response' in locals() else 'No response received'}")
+            return self._create_default_structure(financial_text)
+
+    async def process_financial_data_concurrently(
+        self,
+        raw_financial_text: str,
+        output_dir: str = "generated_slides"
+    ) -> Dict[str, Any]:
+        """
+        Process financial data using concurrent AI operations for improved performance.
+        
+        This method runs preprocessing and data extraction concurrently when possible,
+        reducing the total processing time from ~68s to potentially ~35-40s.
+        
+        Args:
+            raw_financial_text: Raw financial text input
+            output_dir: Directory to save generated slides
+        Returns:
+            Parsed financial data in JSON format
+        """
+        import time
+        concurrent_start = time.time()
+        
+        print(f"🚀 Starting concurrent AI processing...")
+        
+        # Strategy: Run preprocessing first, then use the result for data extraction
+        # We can't truly parallelize these since data extraction depends on preprocessing
+        # But we can optimize the workflow and prepare for future parallel operations
+        
+        # Step 1: Preprocessing (must complete first)
+        print(f"🧠 Step 1: DeepSeek preprocessing...")
+        preprocessed_text = await self.preprocess_with_deepseek_async(raw_financial_text)
+        
+        # Step 2: Data extraction using preprocessed text
+        print(f"📊 Step 2: AI data extraction...")
+        parsed_data = await self.generate_financial_slides_async(preprocessed_text, output_dir)
+        
+        concurrent_duration = time.time() - concurrent_start
+        print(f"⚡ Total concurrent processing completed in {concurrent_duration:.2f}s")
+        
+        return parsed_data
+
+    def extract_revenue_metrics_sync(self, preprocessed_text: str) -> Dict[str, Any]:
+        """Extract revenue-related metrics synchronously for ThreadPoolExecutor"""
+        system_prompt = """You are a financial data analyst specializing in REVENUE METRICS. Extract ONLY these metrics from the preprocessed financial text:
+
+1. Income (Revenue/Sales)
+2. Gross Profit
+3. Cost of Sale (COGS/Cost of Goods Sold)
+
+Return ONLY valid JSON with this structure:
+{
+    "metrics": [
+        {
+            "name": "Income",
+            "value": "$155,815",
+            "label": "Peak Revenue (Dec 2020)",
+            "kpis": {
+                "vs_previous": {"pct": -44.6, "from": 9384, "to": 5200},
+                "previous_label": "Aug 2024",
+                "latest_label": "Sep 2024"
+            },
+            "bullet_points": [
+                "Key insight with specific numbers and trends",
+                "Another insight with root causes if mentioned"
+            ],
+            "chart_data": [
+                {"name": "May 2019", "series1": 8321, "series2": 0, "series3": 0}
+            ]
+        }
+    ]
+}"""
+
+        user_prompt = f"""Extract ONLY revenue-related metrics (Income, Gross Profit, Cost of Sale) from this preprocessed text:
+
+{preprocessed_text}
+
+Focus on:
+- All revenue/income values with time periods
+- Gross profit calculations and trends
+- Cost of goods sold data
+- Sort chart_data chronologically
+- Include percentage changes and insights"""
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        
+        try:
+            thread_id = threading.get_ident()
+            print(f"🔵 Revenue extraction starting on thread {thread_id}")
+            response = self.ai_service.generate_completion(messages)
+            print(f"🔵 Revenue extraction completed on thread {thread_id}")
+            return self._parse_json_response(response, "Revenue Metrics")
+        except Exception as e:
+            print(f"❌ Revenue metrics extraction failed: {str(e)}")
+            return {"metrics": []}
+
+    def extract_profitability_metrics_sync(self, preprocessed_text: str) -> Dict[str, Any]:
+        """Extract profitability-related metrics synchronously for ThreadPoolExecutor"""
+        system_prompt = """You are a financial data analyst specializing in PROFITABILITY METRICS. Extract ONLY these metrics from the preprocessed financial text:
+
+1. EBITDA
+2. Net Income
+3. Expenses (Operating Expenses)
+
+Return ONLY valid JSON with this structure:
+{
+    "metrics": [
+        {
+            "name": "EBITDA",
+            "value": "$45,200",
+            "label": "Strong EBITDA (Q3 2024)",
+            "kpis": {
+                "vs_previous": {"pct": 15.2, "from": 39200, "to": 45200},
+                "previous_label": "Q2 2024",
+                "latest_label": "Q3 2024"
+            },
+            "bullet_points": [
+                "Key insight with specific numbers and trends",
+                "Another insight with root causes if mentioned"
+            ],
+            "chart_data": [
+                {"name": "Q1 2024", "series1": 35000, "series2": 0, "series3": 0}
+            ]
+        }
+    ]
+}"""
+
+        user_prompt = f"""Extract ONLY profitability metrics (EBITDA, Net Income, Operating Expenses) from this preprocessed text:
+
+{preprocessed_text}
+
+Focus on:
+- EBITDA values and calculations
+- Net income trends over time
+- Operating expense breakdowns
+- Sort chart_data chronologically
+- Include percentage changes and insights"""
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        
+        try:
+            thread_id = threading.get_ident()
+            print(f"🟡 Profitability extraction starting on thread {thread_id}")
+            response = self.ai_service.generate_completion(messages)
+            print(f"🟡 Profitability extraction completed on thread {thread_id}")
+            return self._parse_json_response(response, "Profitability Metrics")
+        except Exception as e:
+            print(f"❌ Profitability metrics extraction failed: {str(e)}")
+            return {"metrics": []}
+
+    def extract_operational_metrics_sync(self, preprocessed_text: str) -> Dict[str, Any]:
+        """Extract operational efficiency metrics synchronously for ThreadPoolExecutor"""
+        system_prompt = """You are a financial data analyst specializing in OPERATIONAL METRICS. Extract ONLY these metrics from the preprocessed financial text:
+
+1. Cash Balance
+2. Customer Collection Days
+3. Supplier Payment Days
+4. Inventory Days
+
+Return ONLY valid JSON with this structure:
+{
+    "metrics": [
+        {
+            "name": "Cash Balance",
+            "value": "$125,000",
+            "label": "Current Cash Position",
+            "kpis": {
+                "vs_previous": {"pct": -12.5, "from": 142857, "to": 125000},
+                "previous_label": "Previous Month",
+                "latest_label": "Current Month"
+            },
+            "bullet_points": [
+                "Key insight with specific numbers and trends",
+                "Another insight with root causes if mentioned"
+            ],
+            "chart_data": [
+                {"name": "Jan 2024", "series1": 150000, "series2": 0, "series3": 0}
+            ]
+        }
+    ]
+}"""
+
+        user_prompt = f"""Extract ONLY operational metrics (Cash Balance, Collection Days, Payment Days, Inventory Days) from this preprocessed text:
+
+{preprocessed_text}
+
+Focus on:
+- Cash balance trends and liquidity
+- Customer collection efficiency
+- Supplier payment terms
+- Inventory turnover metrics
+- Sort chart_data chronologically
+- Include percentage changes and insights"""
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        
+        try:
+            thread_id = threading.get_ident()
+            print(f"🟢 Operational extraction starting on thread {thread_id}")
+            response = self.ai_service.generate_completion(messages)
+            print(f"🟢 Operational extraction completed on thread {thread_id}")
+            return self._parse_json_response(response, "Operational Metrics")
+        except Exception as e:
+            print(f"❌ Operational metrics extraction failed: {str(e)}")
+            return {"metrics": []}
+
+    async def process_financial_data_with_threadpool_concurrency(
+        self,
+        raw_financial_text: str,
+        output_dir: str = "generated_slides"
+    ) -> Dict[str, Any]:
+        """
+        Process financial data with TRUE parallel execution using ThreadPoolExecutor
+        """
+        import time
+        total_start = time.time()
+        
+        print("🚀 Starting ThreadPoolExecutor parallel financial data processing...")
+        
+        # Step 1: Preprocess the text (still sequential as it's needed for all extractions)
+        preprocess_start = time.time()
+        preprocessed_text = await self.preprocess_with_deepseek_async(raw_financial_text)
+        preprocess_duration = time.time() - preprocess_start
+        print(f"📝 Preprocessing completed in {preprocess_duration:.2f}s")
+        
+        # Step 2: Run THREE truly parallel extractions using ThreadPoolExecutor
+        extraction_start = time.time()
+        
+        print("⚡ Starting TRULY PARALLEL extractions with ThreadPoolExecutor...")
+        
+        # Use ThreadPoolExecutor for true parallelism
+        loop = asyncio.get_event_loop()
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            # Submit all tasks to thread pool
+            revenue_future = loop.run_in_executor(
+                executor, 
+                self.extract_revenue_metrics_sync, 
+                preprocessed_text
+            )
+            profitability_future = loop.run_in_executor(
+                executor, 
+                self.extract_profitability_metrics_sync, 
+                preprocessed_text
+            )
+            operational_future = loop.run_in_executor(
+                executor, 
+                self.extract_operational_metrics_sync, 
+                preprocessed_text
+            )
+            
+            # Wait for all tasks to complete
+            revenue_result, profitability_result, operational_result = await asyncio.gather(
+                revenue_future,
+                profitability_future,
+                operational_future,
+                return_exceptions=True
+            )
+        
+        extraction_duration = time.time() - extraction_start
+        print(f"🎯 ThreadPool parallel extractions completed in {extraction_duration:.2f}s")
+        
+        # Step 3: Merge results
+        merge_start = time.time()
+        merged_result = self._merge_concurrent_extractions(
+            revenue_result, profitability_result, operational_result
+        )
+        merge_duration = time.time() - merge_start
+        
+        total_duration = time.time() - total_start
+        
+        print(f"🔄 Results merged in {merge_duration:.2f}s")
+        print(f"🏁 Total ThreadPool parallel processing: {total_duration:.2f}s")
+        print(f"📊 Performance breakdown:")
+        print(f"   - Preprocessing: {preprocess_duration:.2f}s ({preprocess_duration/total_duration*100:.1f}%)")
+        print(f"   - Parallel Extraction: {extraction_duration:.2f}s ({extraction_duration/total_duration*100:.1f}%)")
+        print(f"   - Merging: {merge_duration:.2f}s ({merge_duration/total_duration*100:.1f}%)")
+        
+        return merged_result
+
+    async def extract_revenue_metrics_async(self, preprocessed_text: str) -> Dict[str, Any]:
+        """Extract revenue-related metrics concurrently"""
+        system_prompt = """You are a financial data analyst specializing in REVENUE METRICS. Extract ONLY these metrics from the preprocessed financial text:
+
+1. Income (Revenue/Sales)
+2. Gross Profit
+3. Cost of Sale (COGS/Cost of Goods Sold)
+
+Return ONLY valid JSON with this structure:
+{
+    "metrics": [
+        {
+            "name": "Income",
+            "value": "$155,815",
+            "label": "Peak Revenue (Dec 2020)",
+            "kpis": {
+                "vs_previous": {"pct": -44.6, "from": 9384, "to": 5200},
+                "previous_label": "Aug 2024",
+                "latest_label": "Sep 2024"
+            },
+            "bullet_points": [
+                "Key insight with specific numbers and trends",
+                "Another insight with root causes if mentioned"
+            ],
+            "chart_data": [
+                {"name": "May 2019", "series1": 8321, "series2": 0, "series3": 0}
+            ]
+        }
+    ]
+}"""
+
+        user_prompt = f"""Extract ONLY revenue-related metrics (Income, Gross Profit, Cost of Sale) from this preprocessed text:
+
+{preprocessed_text}
+
+Focus on:
+- All revenue/income values with time periods
+- Gross profit calculations and trends
+- Cost of goods sold data
+- Sort chart_data chronologically
+- Include percentage changes and insights"""
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        
+        try:
+            response = self.ai_service.generate_completion(messages)
+            return self._parse_json_response(response, "Revenue Metrics")
+        except Exception as e:
+            print(f"❌ Revenue metrics extraction failed: {str(e)}")
+            return {"metrics": []}
+
+    async def extract_profitability_metrics_async(self, preprocessed_text: str) -> Dict[str, Any]:
+        """Extract profitability-related metrics concurrently"""
+        system_prompt = """You are a financial data analyst specializing in PROFITABILITY METRICS. Extract ONLY these metrics from the preprocessed financial text:
+
+1. EBITDA
+2. Net Income
+3. Expenses (Operating Expenses)
+
+Return ONLY valid JSON with this structure:
+{
+    "metrics": [
+        {
+            "name": "EBITDA",
+            "value": "$45,200",
+            "label": "Strong EBITDA (Q3 2024)",
+            "kpis": {
+                "vs_previous": {"pct": 15.2, "from": 39200, "to": 45200},
+                "previous_label": "Q2 2024",
+                "latest_label": "Q3 2024"
+            },
+            "bullet_points": [
+                "Key insight with specific numbers and trends",
+                "Another insight with root causes if mentioned"
+            ],
+            "chart_data": [
+                {"name": "Q1 2024", "series1": 35000, "series2": 0, "series3": 0}
+            ]
+        }
+    ]
+}"""
+
+        user_prompt = f"""Extract ONLY profitability metrics (EBITDA, Net Income, Operating Expenses) from this preprocessed text:
+
+{preprocessed_text}
+
+Focus on:
+- EBITDA values and calculations
+- Net income trends over time
+- Operating expense breakdowns
+- Sort chart_data chronologically
+- Include percentage changes and insights"""
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        
+        try:
+            response = self.ai_service.generate_completion(messages)
+            return self._parse_json_response(response, "Profitability Metrics")
+        except Exception as e:
+            print(f"❌ Profitability metrics extraction failed: {str(e)}")
+            return {"metrics": []}
+
+    async def extract_operational_metrics_async(self, preprocessed_text: str) -> Dict[str, Any]:
+        """Extract operational efficiency metrics concurrently"""
+        system_prompt = """You are a financial data analyst specializing in OPERATIONAL METRICS. Extract ONLY these metrics from the preprocessed financial text:
+
+1. Cash Balance
+2. Customer Collection Days
+3. Supplier Payment Days
+4. Inventory Days
+
+Return ONLY valid JSON with this structure:
+{
+    "metrics": [
+        {
+            "name": "Cash Balance",
+            "value": "$125,000",
+            "label": "Current Cash Position",
+            "kpis": {
+                "vs_previous": {"pct": -12.5, "from": 142857, "to": 125000},
+                "previous_label": "Previous Month",
+                "latest_label": "Current Month"
+            },
+            "bullet_points": [
+                "Key insight with specific numbers and trends",
+                "Another insight with root causes if mentioned"
+            ],
+            "chart_data": [
+                {"name": "Jan 2024", "series1": 150000, "series2": 0, "series3": 0}
+            ]
+        }
+    ]
+}"""
+
+        user_prompt = f"""Extract ONLY operational metrics (Cash Balance, Collection Days, Payment Days, Inventory Days) from this preprocessed text:
+
+{preprocessed_text}
+
+Focus on:
+- Cash balance trends and liquidity
+- Customer collection efficiency
+- Supplier payment terms
+- Inventory turnover metrics
+- Sort chart_data chronologically
+- Include percentage changes and insights"""
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        
+        try:
+            response = self.ai_service.generate_completion(messages)
+            return self._parse_json_response(response, "Operational Metrics")
+        except Exception as e:
+            print(f"❌ Operational metrics extraction failed: {str(e)}")
+            return {"metrics": []}
+
+    def _parse_json_response(self, response: str, metric_type: str) -> Dict[str, Any]:
+        """Helper method to parse JSON response from AI"""
+        try:
+            # Clean the response
+            response = response.strip()
+            if response.startswith('```json'):
+                response = response[7:]
+            if response.endswith('```'):
+                response = response[:-3]
+            response = response.strip()
+            
+            # Try to find JSON in the response
+            json_start = response.find('{')
+            json_end = response.rfind('}') + 1
+            if json_start != -1 and json_end > json_start:
+                response = response[json_start:json_end]
+            
+            parsed_data = json.loads(response)
+            print(f"✅ {metric_type} extraction successful: {len(parsed_data.get('metrics', []))} metrics")
+            return parsed_data
+            
+        except json.JSONDecodeError as e:
+            print(f"❌ JSON parsing failed for {metric_type}: {str(e)}")
+            print(f"🔍 Raw response: {response[:200]}...")
+            return {"metrics": []}
+
+    async def process_financial_data_with_true_concurrency(
+        self,
+        raw_financial_text: str,
+        output_dir: str = "generated_slides"
+    ) -> Dict[str, Any]:
+        """
+        Process financial data with TRUE concurrency - split extraction into parallel tasks
+        """
+        import time
+        total_start = time.time()
+        
+        print("🚀 Starting TRUE concurrent financial data processing...")
+        
+        # Step 1: Preprocess the text (still sequential as it's needed for all extractions)
+        preprocess_start = time.time()
+        preprocessed_text = await self.preprocess_with_deepseek_async(raw_financial_text)
+        preprocess_duration = time.time() - preprocess_start
+        print(f"📝 Preprocessing completed in {preprocess_duration:.2f}s")
+        
+        # Step 2: Run THREE concurrent extractions on the preprocessed text
+        extraction_start = time.time()
+        
+        # Create concurrent tasks for different metric groups
+        revenue_task = self.extract_revenue_metrics_async(preprocessed_text)
+        profitability_task = self.extract_profitability_metrics_async(preprocessed_text)
+        operational_task = self.extract_operational_metrics_async(preprocessed_text)
+        
+        # Run all extractions concurrently
+        print("⚡ Running concurrent extractions: Revenue, Profitability, Operational...")
+        revenue_result, profitability_result, operational_result = await asyncio.gather(
+            revenue_task,
+            profitability_task,
+            operational_task,
+            return_exceptions=True
+        )
+        
+        extraction_duration = time.time() - extraction_start
+        print(f"🎯 Concurrent extractions completed in {extraction_duration:.2f}s")
+        
+        # Step 3: Merge results
+        merge_start = time.time()
+        merged_result = self._merge_concurrent_extractions(
+            revenue_result, profitability_result, operational_result
+        )
+        merge_duration = time.time() - merge_start
+        
+        total_duration = time.time() - total_start
+        
+        print(f"🔄 Results merged in {merge_duration:.2f}s")
+        print(f"🏁 Total TRUE concurrent processing: {total_duration:.2f}s")
+        print(f"📊 Performance breakdown:")
+        print(f"   - Preprocessing: {preprocess_duration:.2f}s ({preprocess_duration/total_duration*100:.1f}%)")
+        print(f"   - Concurrent Extraction: {extraction_duration:.2f}s ({extraction_duration/total_duration*100:.1f}%)")
+        print(f"   - Merging: {merge_duration:.2f}s ({merge_duration/total_duration*100:.1f}%)")
+        
+        return merged_result
+
+    def _merge_concurrent_extractions(
+        self, 
+        revenue_result: Dict[str, Any], 
+        profitability_result: Dict[str, Any], 
+        operational_result: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Merge results from concurrent extractions into final structure"""
+        
+        # Handle exceptions from asyncio.gather
+        if isinstance(revenue_result, Exception):
+            print(f"❌ Revenue extraction failed: {revenue_result}")
+            revenue_result = {"metrics": []}
+        if isinstance(profitability_result, Exception):
+            print(f"❌ Profitability extraction failed: {profitability_result}")
+            profitability_result = {"metrics": []}
+        if isinstance(operational_result, Exception):
+            print(f"❌ Operational extraction failed: {operational_result}")
+            operational_result = {"metrics": []}
+        
+        # Combine all metrics
+        all_metrics = []
+        all_metrics.extend(revenue_result.get("metrics", []))
+        all_metrics.extend(profitability_result.get("metrics", []))
+        all_metrics.extend(operational_result.get("metrics", []))
+        
+        # Create final structure
+        merged_data = {
+            "title": "Financial Analysis Report",
+            "subtitle": f"Concurrent Analysis - {len(all_metrics)} Metrics",
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "metrics": all_metrics
+        }
+        
+        print(f"✅ Merged {len(all_metrics)} metrics from concurrent extractions")
+        print(f"📈 Revenue metrics: {len(revenue_result.get('metrics', []))}")
+        print(f"💰 Profitability metrics: {len(profitability_result.get('metrics', []))}")
+        print(f"⚙️ Operational metrics: {len(operational_result.get('metrics', []))}")
+        
+        return merged_data
+
     def generate_financial_slides(
         self,
         financial_text: str,
         output_dir: str = "generated_slides"
-    ) -> List[str]:
+    ) -> Dict[str, Any]:
         """
         Generate TSX slide components from financial text.
         

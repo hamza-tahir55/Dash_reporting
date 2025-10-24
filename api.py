@@ -51,6 +51,7 @@ class FinancialDataRequest(BaseModel):
     contact_website: Optional[str] = "www.app.DashAnalytix.com"   # ← Default website
     presentation_date: Optional[str] = None  # Auto-generates current month/year
     prepared_by: Optional[str] = "Analytics Team"                   # ← Default prepared by
+    logo_url: Optional[str] = None                                  # ← Dynamic logo URL
     
 
 class GeneratePDFResponse(BaseModel):
@@ -175,19 +176,13 @@ async def generate_presentation(request: FinancialDataRequest):
         print(f"🧠 DeepSeek preprocessing input text...")
         generator = FinancialTSXGenerator()
         
-        # First stage: DeepSeek processes the raw input text
-        preprocessed_text = generator.preprocess_with_deepseek(request.financial_text)
-        step_start = log_step("2. DeepSeek Text Preprocessing", step_start)
-        
-        # Step 3: AI Processing - Parse the preprocessed financial data
-        print(f"📊 Generating TSX slides from preprocessed text...")
-        
-        # Second stage: Use the preprocessed text for slide generation
-        parsed_data = generator.generate_financial_slides(
-            financial_text=preprocessed_text,
+        # Use ThreadPoolExecutor concurrent processing for improved performance
+        print(f"🚀 Using ThreadPoolExecutor concurrent AI processing to reduce processing time...")
+        parsed_data = await generator.process_financial_data_with_threadpool_concurrency(
+            raw_financial_text=request.financial_text,
             output_dir=output_dir
         )
-        step_start = log_step("3. AI Processing & Data Extraction", step_start)
+        step_start = log_step("2-3. Concurrent AI Processing & Data Extraction", step_start)
         
         # DEBUG: Print what AI extracted
         print(f"\n{'='*60}")
@@ -307,14 +302,16 @@ export default BusinessDashboardSlide;'''
                 
                 # Add custom data from request
                 if data['type'] == 'title':
-                    data['title'] = request.report_title
-                    data['subtitle'] = request.report_subtitle
-                    data['org_name'] = request.organization_name
-                    data['phone'] = request.contact_phone
-                    data['email'] = request.contact_email
-                    data['website'] = request.contact_website
+                    data['title'] = request.report_title or "Financial Analysis Report"
+                    data['subtitle'] = request.report_subtitle or "Comprehensive Financial Overview"
+                    data['org_name'] = request.organization_name or "Financial Analysis"
+                    data['organization'] = request.organization_name or "Financial Analysis"  # For footer consistency
+                    data['phone'] = request.contact_phone or "+1-234-567-8900"
+                    data['email'] = request.contact_email or "contact@DashAnalytix.com"
+                    data['website'] = request.contact_website or "www.app.DashAnalytix.com"
                     data['date'] = request.presentation_date or datetime.now().strftime("%B %Y")
-                    data['prepared_by'] = request.prepared_by
+                    data['prepared_by'] = request.prepared_by or "Analytics Team"
+                    data['logo_url'] = request.logo_url
                     html = generate_title_html(data)
                 elif 'Dashboard' in tsx_file.name:
                     # Generate dashboard slide with all metrics data from ALL generated files

@@ -9,8 +9,16 @@ import json
 import re
 import base64
 
-def get_logo_base64():
+def get_logo_base64(logo_url=None):
     """Convert logo to base64 for embedding in HTML."""
+    # If a custom logo URL is provided, clean it and use it directly
+    if logo_url:
+        # Clean the URL by removing spaces, backticks, and other unwanted characters
+        cleaned_url = logo_url.strip().strip('`').strip()
+        if cleaned_url:
+            return cleaned_url
+    
+    # Otherwise, try to use local logo file
     logo_path = Path("assets/logo.png")
     if logo_path.exists():
         with open(logo_path, "rb") as f:
@@ -133,7 +141,7 @@ def parse_tsx_with_data(file_path):
 
 def generate_title_html(data):
     """Generate modern title slide with brand colors."""
-    logo_src = get_logo_base64()
+    logo_src = get_logo_base64(data.get('logo_url'))
     
     return f"""<!DOCTYPE html>
 <html lang="en">
