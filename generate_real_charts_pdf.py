@@ -812,7 +812,7 @@ def generate_dashboard_html_with_real_data(all_metrics_data):
                 change_pct = 0
             
             # Categorize metrics - EXCLUDE main financial KPIs from dashboard
-excluded_main_kpis = ['income', 'gross profit', 'net income', 'cash flow']
+            excluded_main_kpis = ['income', 'gross profit', 'net income', 'cash flow']
             
             if metric_name.lower() in excluded_main_kpis:
                 print(f"      🚫 Excluded main KPI from dashboard: {metric_name}")
