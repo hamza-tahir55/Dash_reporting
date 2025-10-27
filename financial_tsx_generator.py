@@ -75,7 +75,7 @@ ONLY extract and structure data for these 10 KPIs:
 4. Gross Profit
 5. EBITDA
 6. Net Income
-7. Cash Balance
+7. Cash Flow
 8. Customer Collection Days
 9. Supplier Payment Days
 10. Inventory Days
@@ -148,7 +148,7 @@ ONLY extract and structure data for these 10 KPIs:
 4. Gross Profit
 5. EBITDA
 6. Net Income
-7. Cash Balance
+7. Cash Flow
 8. Customer Collection Days
 9. Supplier Payment Days
 10. Inventory Days
@@ -519,7 +519,7 @@ Focus on:
         """Extract operational efficiency metrics synchronously for ThreadPoolExecutor"""
         system_prompt = """You are a financial data analyst specializing in OPERATIONAL METRICS. Extract ONLY these metrics from the preprocessed financial text:
 
-1. Cash Balance
+1. Cash Flow
 2. Customer Collection Days
 3. Supplier Payment Days
 4. Inventory Days
@@ -528,9 +528,9 @@ Return ONLY valid JSON with this structure:
 {
     "metrics": [
         {
-            "name": "Cash Balance",
+            "name": "Cash Flow",
             "value": "$125,000",
-            "label": "Current Cash Position",
+            "label": "Operating Cash Flow",
             "kpis": {
                 "vs_previous": {"pct": -12.5, "from": 142857, "to": 125000},
                 "previous_label": "Previous Month",
@@ -547,17 +547,17 @@ Return ONLY valid JSON with this structure:
     ]
 }"""
 
-        user_prompt = f"""Extract ONLY operational metrics (Cash Balance, Collection Days, Payment Days, Inventory Days) from this preprocessed text:
+        user_prompt = f"""Extract ONLY operational metrics (Cash Flow, Collection Days, Payment Days, Inventory Days) from this preprocessed text:
 
 {preprocessed_text}
 
 Focus on:
-- Cash balance trends and liquidity
-- Customer collection efficiency
-- Supplier payment terms
-- Inventory turnover metrics
-- Sort chart_data chronologically
-- Include percentage changes and insights"""
+        - Cash flow trends and liquidity
+        - Customer collection efficiency
+        - Supplier payment terms
+        - Inventory turnover metrics
+        - Sort chart_data chronologically
+        - Include percentage changes and insights"""
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -759,7 +759,7 @@ Focus on:
         """Extract operational efficiency metrics concurrently"""
         system_prompt = """You are a financial data analyst specializing in OPERATIONAL METRICS. Extract ONLY these metrics from the preprocessed financial text:
 
-1. Cash Balance
+1. Cash Flow
 2. Customer Collection Days
 3. Supplier Payment Days
 4. Inventory Days
@@ -768,9 +768,9 @@ Return ONLY valid JSON with this structure:
 {
     "metrics": [
         {
-            "name": "Cash Balance",
+            "name": "Cash Flow",
             "value": "$125,000",
-            "label": "Current Cash Position",
+            "label": "Operating Cash Flow",
             "kpis": {
                 "vs_previous": {"pct": -12.5, "from": 142857, "to": 125000},
                 "previous_label": "Previous Month",
@@ -787,17 +787,17 @@ Return ONLY valid JSON with this structure:
     ]
 }"""
 
-        user_prompt = f"""Extract ONLY operational metrics (Cash Balance, Collection Days, Payment Days, Inventory Days) from this preprocessed text:
+        user_prompt = f"""Extract ONLY operational metrics (Cash Flow, Collection Days, Payment Days, Inventory Days) from this preprocessed text:
 
 {preprocessed_text}
 
 Focus on:
-- Cash balance trends and liquidity
-- Customer collection efficiency
-- Supplier payment terms
-- Inventory turnover metrics
-- Sort chart_data chronologically
-- Include percentage changes and insights"""
+        - Cash flow trends and liquidity
+        - Customer collection efficiency
+        - Supplier payment terms
+        - Inventory turnover metrics
+        - Sort chart_data chronologically
+        - Include percentage changes and insights"""
 
         messages = [
             {"role": "system", "content": system_prompt},

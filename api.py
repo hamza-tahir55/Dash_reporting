@@ -63,7 +63,7 @@ class GeneratePDFResponse(BaseModel):
 
 
 def _filter_to_ten_slides(all_files: List[str], output_dir: str) -> List[str]:
-    """Organize slides with specific flow: Title -> Dashboard -> Income -> Gross Profit -> Net Income -> Cash Balance."""
+"""Organize slides with specific flow: Title -> Dashboard -> Income -> Gross Profit -> Net Income -> Cash Flow."""
     from pathlib import Path
     
     print(f"   📋 All generated files:")
@@ -108,7 +108,7 @@ def _filter_to_ten_slides(all_files: List[str], output_dir: str) -> List[str]:
     selected_files = selected_files[:6]
     
     print(f"   📊 Including {len(selected_files)} slides from {len(all_files)} generated")
-    print(f"   🎯 Flow: Title -> Dashboard (other KPIs) -> Income -> Gross Profit -> Net Income -> Cash Balance")
+    print(f"   🎯 Flow: Title -> Dashboard (other KPIs) -> Income -> Gross Profit -> Net Income -> Cash Flow")
     
     return selected_files
 
