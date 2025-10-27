@@ -45,6 +45,7 @@ class FinancialDataRequest(BaseModel):
     financial_text: str
     report_title: Optional[str] = "Financial Analysis Report"        # ← Default title
     report_subtitle: Optional[str] = "Comprehensive Financial Overview"  # ← Default subtitle
+    company_name: Optional[str] = "DashAnalytix"                     # ← Company name from frontend
     organization_name: Optional[str] = "Financial Analysis"          # ← Default org name
     contact_phone: Optional[str] = "+1-234-567-8900"                # ← Default phone
     contact_email: Optional[str] = "contact@DashAnalytix.com" # ← Default email
@@ -304,6 +305,7 @@ export default BusinessDashboardSlide;'''
                 if data['type'] == 'title':
                     data['title'] = request.report_title or "Financial Analysis Report"
                     data['subtitle'] = request.report_subtitle or "Comprehensive Financial Overview"
+                    data['company_name'] = request.company_name or "DashAnalytix"
                     data['org_name'] = request.organization_name or "Financial Analysis"
                     data['organization'] = request.organization_name or "Financial Analysis"  # For footer consistency
                     data['phone'] = request.contact_phone or "+1-234-567-8900"

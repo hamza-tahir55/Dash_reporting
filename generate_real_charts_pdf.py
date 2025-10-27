@@ -206,7 +206,7 @@ body {{
              class="w-full h-full object-contain">
       </div>
       <div>
-        <div class="text-2xl font-bold text-white tracking-tight">DashAnalytix</div>
+        <div class="text-2xl font-bold text-white tracking-tight">{data.get('company_name', 'DashAnalytix')}</div>
         <div class="text-xs text-blue-300 font-medium tracking-wider">FINANCIAL INTELLIGENCE</div>
       </div>
     </div>
