@@ -142,6 +142,10 @@ def parse_tsx_with_data(file_path):
 def generate_title_html(data):
     """Generate modern title slide with brand colors."""
     logo_src = get_logo_base64(data.get('logo_url'))
+    custom_logo_provided = bool(data.get('logo_url') and str(data.get('logo_url')).strip())
+    default_wrapper = "w-14 h-14 bg-white rounded-2xl shadow-2xl shadow-blue-500/30 p-2 flex items-center justify-center"
+    custom_wrapper = "w-20 h-20 rounded-full overflow-hidden bg-transparent"
+    logo_wrapper_class = custom_wrapper if custom_logo_provided else default_wrapper
     
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -200,10 +204,10 @@ body {{
   <!-- Header Bar -->
   <div class="absolute top-0 left-0 right-0 px-16 py-8 flex justify-between items-center z-20">
     <div class="flex items-center space-x-4">
-      <div class="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/30 p-2">
+      <div class="{logo_wrapper_class}">
         <img src="{logo_src}" 
              alt="DashAnalytix Logo" 
-             class="w-full h-full object-contain">
+             class="test_logo">
       </div>
       <div>
         <div class="text-2xl font-bold text-white tracking-tight">{data.get('company_name', 'DashAnalytix')}</div>
@@ -812,7 +816,7 @@ def generate_dashboard_html_with_real_data(all_metrics_data):
                 change_pct = 0
             
             # Categorize metrics - EXCLUDE main financial KPIs from dashboard
-            excluded_main_kpis = ['income', 'gross profit', 'net income', 'cash flow']
+            excluded_main_kpis =  ['income', 'gross profit', 'net income', 'cash flow']
             
             if metric_name.lower() in excluded_main_kpis:
                 print(f"      🚫 Excluded main KPI from dashboard: {metric_name}")
