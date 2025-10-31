@@ -53,6 +53,7 @@ class FinancialDataRequest(BaseModel):
     presentation_date: Optional[str] = None  # Auto-generates current month/year
     prepared_by: Optional[str] = "Analytics Team"                   # ← Default prepared by
     logo_url: Optional[str] = None                                  # ← Dynamic logo URL
+    dash_logo: Optional[bool] = True                                # ← Whether to show DashAnalytix logo
     
 
 class GeneratePDFResponse(BaseModel):
@@ -314,6 +315,7 @@ export default BusinessDashboardSlide;'''
                     data['date'] = request.presentation_date or datetime.now().strftime("%B %Y")
                     data['prepared_by'] = request.prepared_by or "Analytics Team"
                     data['logo_url'] = request.logo_url
+                    data['dash_logo'] = request.dash_logo
                     html = generate_title_html(data)
                 elif 'Dashboard' in tsx_file.name:
                     # Generate dashboard slide with all metrics data from ALL generated files
