@@ -530,7 +530,7 @@ Return ONLY valid JSON with this structure:
         {
             "name": "Cash Flow",
             "value": "$125,000",
-            "label": "Operating Cash Flow",
+            "label": "Net Cash Flow",
             "kpis": {
                 "vs_previous": {"pct": -12.5, "from": 142857, "to": 125000},
                 "previous_label": "Previous Month",
@@ -541,18 +541,28 @@ Return ONLY valid JSON with this structure:
                 "Another insight with root causes if mentioned"
             ],
             "chart_data": [
-                {"name": "Jan 2024", "series1": 150000, "series2": 0, "series3": 0}
+                {"name": "Jan 2024", "series1": 150000, "series2": -50000, "series3": -30000},
+                {"name": "Feb 2024", "series1": 180000, "series2": -60000, "series3": -40000}
             ]
         }
     ]
-}"""
+}
+
+CRITICAL for Cash Flow metric:
+- series1 = Operating Activities (cash from operations)
+- series2 = Investing Activities (cash from investments, usually negative)
+- series3 = Financing Activities (cash from financing, can be positive or negative)
+- Extract ALL three components for EACH period if mentioned in the text
+- If a component is not mentioned for a period, use 0
+- Sort chart_data chronologically"""
 
         user_prompt = f"""Extract ONLY operational metrics (Cash Flow, Collection Days, Payment Days, Inventory Days) from this preprocessed text:
 
 {preprocessed_text}
 
 Focus on:
-        - Cash flow trends and liquidity
+        - Cash flow trends and liquidity with BREAKDOWN by Operating/Investing/Financing activities
+        - For Cash Flow: Extract Operating, Investing, and Financing cash flows for each period
         - Customer collection efficiency
         - Supplier payment terms
         - Inventory turnover metrics
@@ -770,7 +780,7 @@ Return ONLY valid JSON with this structure:
         {
             "name": "Cash Flow",
             "value": "$125,000",
-            "label": "Operating Cash Flow",
+            "label": "Net Cash Flow",
             "kpis": {
                 "vs_previous": {"pct": -12.5, "from": 142857, "to": 125000},
                 "previous_label": "Previous Month",
@@ -781,18 +791,28 @@ Return ONLY valid JSON with this structure:
                 "Another insight with root causes if mentioned"
             ],
             "chart_data": [
-                {"name": "Jan 2024", "series1": 150000, "series2": 0, "series3": 0}
+                {"name": "Jan 2024", "series1": 150000, "series2": -50000, "series3": -30000},
+                {"name": "Feb 2024", "series1": 180000, "series2": -60000, "series3": -40000}
             ]
         }
     ]
-}"""
+}
+
+CRITICAL for Cash Flow metric:
+- series1 = Operating Activities (cash from operations)
+- series2 = Investing Activities (cash from investments, usually negative)
+- series3 = Financing Activities (cash from financing, can be positive or negative)
+- Extract ALL three components for EACH period if mentioned in the text
+- If a component is not mentioned for a period, use 0
+- Sort chart_data chronologically"""
 
         user_prompt = f"""Extract ONLY operational metrics (Cash Flow, Collection Days, Payment Days, Inventory Days) from this preprocessed text:
 
 {preprocessed_text}
 
 Focus on:
-        - Cash flow trends and liquidity
+        - Cash flow trends and liquidity with BREAKDOWN by Operating/Investing/Financing activities
+        - For Cash Flow: Extract Operating, Investing, and Financing cash flows for each period
         - Customer collection efficiency
         - Supplier payment terms
         - Inventory turnover metrics

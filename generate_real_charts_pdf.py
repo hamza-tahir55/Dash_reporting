@@ -330,17 +330,24 @@ def generate_cashflow_waterfall_html(data):
     chart_data = data.get('chart_data', [])
     
     # Default sample data if no chart data available
-    if len(chart_data) >= 4:
+    if len(chart_data) >= 1:
         # Use actual data from chart_data
-        quarters = [point.get('name', f'Q{i+1}') for i, point in enumerate(chart_data[:4])]
-        # Assuming chart data contains operating, investing, financing values
-        # For now, we'll use the series1 values and distribute them
-        values = [point.get('series1', 0) for point in chart_data[:4]]
-        operating_data = [int(v * 0.6) for v in values]  # 60% operating
-        investing_data = [int(v * -0.2) for v in values]  # -20% investing
-        financing_data = [int(v * -0.2) for v in values]  # -20% financing
+        # series1 = Operating Activities
+        # series2 = Investing Activities
+        # series3 = Financing Activities
+        quarters = [point.get('name', f'Period {i+1}') for i, point in enumerate(chart_data)]
+        operating_data = [int(point.get('series1', 0)) for point in chart_data]
+        investing_data = [int(point.get('series2', 0)) for point in chart_data]
+        financing_data = [int(point.get('series3', 0)) for point in chart_data]
+        
+        print(f"    📊 Cash Flow Waterfall Data:")
+        print(f"       Periods: {quarters}")
+        print(f"       Operating: {operating_data}")
+        print(f"       Investing: {investing_data}")
+        print(f"       Financing: {financing_data}")
     else:
         # Use sample data
+        print(f"    ⚠️  No chart_data found, using sample data")
         quarters = ['Q1', 'Q2', 'Q3', 'Q4']
         operating_data = [2100000, 2400000, 2000000, 2300000]
         investing_data = [-800000, -600000, -700000, -500000]
@@ -364,6 +371,19 @@ def generate_cashflow_waterfall_html(data):
         if val >= 0:
             return f"+{format_currency(val)}"
         return format_currency(val)
+    
+    # Determine the appropriate unit text based on the largest value
+    def get_unit_text(values):
+        max_val = max([abs(val) for val in values if val != 0], default=0)
+        if max_val >= 1000000:
+            return "All values in millions (M)"
+        elif max_val >= 1000:
+            return "All values in thousands (K)"
+        return "All values in actual amounts"
+    
+    # Calculate the appropriate unit text based on all values
+    all_values = operating_data + investing_data + financing_data
+    unit_text = get_unit_text(all_values)
     
     return f"""<!DOCTYPE html>
 <html>
@@ -519,7 +539,7 @@ def generate_cashflow_waterfall_html(data):
         <!-- Right Panel -->
         <div class="w-1/2 bg-gradient-to-br from-gray-50 to-gray-100 px-10 py-8 relative">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-black text-gray-800">Cash Flow Waterfall by Quarter</h3>
+                <h3 class="text-lg font-black text-gray-800">Performance Trend</h3>
                 <div class="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-full shadow-sm">
                     <div class="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500"></div>
                     <span class="text-xs font-bold text-gray-700">Component View</span>
@@ -547,7 +567,7 @@ def generate_cashflow_waterfall_html(data):
                         <span class="text-xs font-semibold text-gray-700">Net Change</span>
                     </div>
                 </div>
-                <div class="text-xs text-gray-500 font-medium">All values in millions (M)</div>
+                <div class="text-xs text-gray-500 font-medium">{unit_text}</div>
             </div>
         </div>
         <div class="absolute bottom-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-cyan-400 to-blue-600"></div>
@@ -570,6 +590,29 @@ def generate_cashflow_waterfall_html(data):
                     operatingData[i] + investingData[i] + financingData[i]
                 );
 
+                // Dynamic formatting function based on value magnitude
+                function formatCurrency(value) {{
+                    const absValue = Math.abs(value);
+                    if (absValue >= 1000000) {{
+                        return '$' + (value / 1000000).toFixed(1) + 'M';
+                    }} else if (absValue >= 1000) {{
+                        return '$' + (value / 1000).toFixed(0) + 'K';
+                    }} else {{
+                        return '$' + value.toLocaleString();
+                    }}
+                }}
+
+                function formatCurrencySigned(value) {{
+                    const prefix = value >= 0 ? '+' : '';
+                    return prefix + formatCurrency(value);
+                }}
+
+                // Function to clean up date labels - keep full date for period display
+                function cleanDateLabel(dateStr) {{
+                    // Return the original date string for period labels
+                    return dateStr;
+                }}
+
                 // Create waterfall data structure
                 const waterfallData = [];
                 const colors = [];
@@ -579,31 +622,34 @@ def generate_cashflow_waterfall_html(data):
                     let runningTotal = 0;
                     
                     // Operating (base)
-                    labels.push(quarter + '\\nOperating');
+                    labels.push('');  // Empty label
                     waterfallData.push([0, operatingData[i]]);
                     colors.push('#22c55e');
                     
                     runningTotal = operatingData[i];
                     
                     // Investing (stack on operating)
-                    labels.push(quarter + '\\nInvesting');
+                    labels.push(quarter);  // Center label on middle bar
                     waterfallData.push([runningTotal, runningTotal + investingData[i]]);
                     colors.push('#f59e0b');
                     
                     runningTotal += investingData[i];
                     
                     // Financing (stack on investing)
-                    labels.push(quarter + '\\nFinancing');
+                    labels.push('');  // Empty label
                     waterfallData.push([runningTotal, runningTotal + financingData[i]]);
                     colors.push('#ef4444');
                     
                     runningTotal += financingData[i];
                     
-                    // Net (final bar)
-                    labels.push(quarter + '\\nNet');
+                    // Net Cash (final bar)
+                    labels.push('');  // Empty label
                     waterfallData.push([0, netCashData[i]]);
                     colors.push('#06b6d4');
                 }});
+
+                // Debug: Log the labels to console
+                console.log('Generated labels:', labels);
 
                 const ctx = document.getElementById('waterfallChart').getContext('2d');
                 new Chart(ctx, {{
@@ -662,8 +708,7 @@ def generate_cashflow_waterfall_html(data):
                                 }},
                                 formatter: function(value) {{
                                     const diff = value[1] - value[0];
-                                    const prefix = diff >= 0 ? '+' : '';
-                                    return prefix + '$' + (diff / 1000000).toFixed(1) + 'M';
+                                    return formatCurrencySigned(diff);
                                 }}
                             }},
                             tooltip: {{
@@ -681,7 +726,7 @@ def generate_cashflow_waterfall_html(data):
                                         const value = context.parsed.y;
                                         const raw = context.dataset.data[context.dataIndex];
                                         const diff = raw[1] - raw[0];
-                                        return 'Amount: $' + (diff / 1000000).toFixed(2) + 'M';
+                                        return 'Amount: ' + formatCurrency(diff);
                                     }}
                                 }}
                             }}
@@ -691,7 +736,7 @@ def generate_cashflow_waterfall_html(data):
                                 beginAtZero: true,
                                 ticks: {{
                                     callback: function(value) {{
-                                        return '$' + (value/1000000).toFixed(1) + 'M';
+                                        return formatCurrency(value);
                                     }},
                                     font: {{ size: 11, weight: '600' }},
                                     color: '#64748b'
@@ -707,7 +752,9 @@ def generate_cashflow_waterfall_html(data):
                                     font: {{ size: 10, weight: '600' }},
                                     color: '#64748b',
                                     maxRotation: 0,
-                                    minRotation: 0
+                                    minRotation: 0,
+                                    autoSkip: false,
+                                    maxTicksLimit: false
                                 }},
                                 grid: {{ display: false }},
                                 border: {{ display: false }}

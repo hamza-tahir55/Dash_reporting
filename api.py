@@ -20,7 +20,8 @@ from generate_real_charts_pdf import (
     generate_title_html,
     generate_statistic_html_with_real_chart,
     generate_comparison_html_with_real_charts,
-    generate_dashboard_html_with_real_data
+    generate_dashboard_html_with_real_data,
+    generate_cashflow_waterfall_html
 )
 from PyPDF2 import PdfMerger
 
@@ -330,7 +331,12 @@ export default BusinessDashboardSlide;'''
                 elif data['type'] == 'comparison':
                     html = generate_comparison_html_with_real_charts(data)
                 else:
-                    html = generate_statistic_html_with_real_chart(data)
+                    # Check if this is a Cash Flow metric - use waterfall chart
+                    if 'cash flow' in data.get('title', '').lower():
+                        print(f"    💧 Detected Cash Flow - using waterfall chart")
+                        html = generate_cashflow_waterfall_html(data)
+                    else:
+                        html = generate_statistic_html_with_real_chart(data)
                 
                 html_start = time.time()
                 await page.set_content(html)
