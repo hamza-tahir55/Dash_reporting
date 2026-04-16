@@ -5,10 +5,12 @@ Deploy to Railway with: railway up
 import time
 from datetime import datetime
 from pathlib import Path
+import os
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from financial_models import (
     GenerateContentRequest,
@@ -33,6 +35,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Serve generated PDFs at /static/<filename>
+Path("static").mkdir(exist_ok=True)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 # ── Health ────────────────────────────────────────────────────────────────────

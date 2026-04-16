@@ -1,6 +1,6 @@
 """
 PDF slide generation from structured frontend data.
-Builds Chart.js HTML pages, renders via Playwright, merges with PyPDF2.
+Restores the original blue-gradient design, adapted for the new data models.
 """
 import base64
 import json
@@ -14,18 +14,16 @@ from typing import List
 from PyPDF2 import PdfMerger
 from playwright.async_api import async_playwright
 
-from financial_models import GeneratePDFRequest, SlidePayload
+from financial_models import GeneratePDFRequest, SlidePayload, ChartData
 
 
 # ── Logo helper ───────────────────────────────────────────────────────────────
 
 def _get_logo_src(logo_url: str | None, use_dash_logo: bool) -> str | None:
-    """Return a src string (data-URI or URL) for the logo, or None."""
     if not use_dash_logo:
         if logo_url:
             return logo_url.strip().strip("`")
         return None
-    # Use bundled Dash Analytix logo
     logo_path = Path("assets/logo.png")
     if logo_path.exists():
         data = base64.b64encode(logo_path.read_bytes()).decode()
@@ -33,266 +31,141 @@ def _get_logo_src(logo_url: str | None, use_dash_logo: bool) -> str | None:
     return "https://dashanalytix.com/wp-content/uploads/2023/11/logo-color.png"
 
 
-# ── HTML generators ───────────────────────────────────────────────────────────
+def _fmt_value(v: float) -> str:
+    """Format a number as $XM / $XK / $X."""
+    if abs(v) >= 1_000_000:
+        return f"${v / 1_000_000:.1f}M"
+    if abs(v) >= 1_000:
+        return f"${v / 1_000:.0f}K"
+    return f"${v:,.0f}"
+
+
+# ── Title slide ───────────────────────────────────────────────────────────────
 
 def _title_html(req: GeneratePDFRequest) -> str:
     logo_src = _get_logo_src(req.logo_url, req.dash_logo)
-    logo_tag = (
-        f'<img src="{logo_src}" alt="Logo" class="logo">'
-        if logo_src
-        else ""
+    custom_logo = bool(req.logo_url and str(req.logo_url).strip())
+
+    if req.dash_logo:
+        logo_wrapper = 'width:56px;height:56px;background:white;border-radius:16px;box-shadow:0 25px 50px -12px rgba(59,130,246,0.3);padding:8px;display:flex;align-items:center;justify-content:center;margin-right:16px;'
+        logo_img = 'display:block;width:100%;height:100%;object-fit:contain;'
+        show_logo = bool(logo_src)
+    elif custom_logo:
+        logo_wrapper = 'width:80px;height:80px;border-radius:50%;overflow:hidden;background:transparent;margin-right:16px;'
+        logo_img = 'display:block;width:100%;height:100%;object-fit:cover;'
+        show_logo = True
+    else:
+        logo_wrapper = logo_img = ''
+        show_logo = False
+
+    logo_html = (
+        f'<div style="{logo_wrapper}"><img src="{logo_src}" alt="Logo" style="{logo_img}"></div>'
+        if show_logo else ''
     )
 
-    date_str = req.presentation_date or datetime.now().strftime("%B %Y")
+    company = req.company_name or req.organization_name or 'DashAnalytix'
+    org     = req.organization_name or 'ORGANIZATION'
+    date    = req.presentation_date or datetime.now().strftime('%B %Y')
+    prepared_by = req.prepared_by or 'Analytics Team'
+    email   = req.contact_email or ''
+    website = req.contact_website or ''
+    subtitle = req.report_subtitle or ''
 
-    footer_parts = [p for p in [req.organization_name, req.prepared_by, date_str] if p]
-    footer_line = " &nbsp;|&nbsp; ".join(footer_parts)
-
-    contact_parts = []
-    if req.contact_email:
-        contact_parts.append(f"&#9993; {req.contact_email}")
-    if req.contact_phone:
-        contact_parts.append(f"&#9742; {req.contact_phone}")
-    if req.contact_website:
-        contact_parts.append(req.contact_website)
-    contact_line = " &nbsp;&nbsp; ".join(contact_parts)
-
-    subtitle_html = (
-        f'<p class="subtitle">{req.report_subtitle}</p>'
-        if req.report_subtitle
-        else ""
-    )
-
-    # NOTE: Use radial-gradient backgrounds instead of blur()+border-radius blobs —
-    # filter:blur + border-radius:50% renders as geometric outlines in Playwright PDF mode.
-    # Also avoid -webkit-background-clip:text / -webkit-text-fill-color:transparent
-    # as those make text invisible in Playwright PDF export.
     return f"""<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
 <style>
-  * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-  body {{
-    width: 1280px; height: 720px; overflow: hidden;
-    /* Multi-layer radial gradients replace JS/blur blobs — PDF-safe */
-    background-color: #0b1120;
-    background-image:
-      radial-gradient(ellipse 700px 600px at -5% -10%, rgba(0,212,170,0.22) 0%, transparent 70%),
-      radial-gradient(ellipse 600px 500px at 105% 110%, rgba(0,80,220,0.28) 0%, transparent 70%),
-      radial-gradient(ellipse 400px 350px at 75% 20%, rgba(100,50,200,0.14) 0%, transparent 65%);
-    font-family: 'Segoe UI', Arial, sans-serif;
-    color: #ffffff;
-    position: relative;
-  }}
-  /* Decorative geometric accents (PDF-safe, no filter:blur) */
-  .geo {{
-    position: absolute;
-    border: 1px solid rgba(255,255,255,0.07);
-  }}
-  .geo-1 {{ width: 220px; height: 220px; top: 60px; right: 120px; transform: rotate(15deg); }}
-  .geo-2 {{ width: 120px; height: 120px; bottom: 80px; left: 160px; transform: rotate(30deg); }}
-  .geo-3 {{
-    width: 0; height: 0;
-    border: none;
-    border-left: 80px solid transparent;
-    border-right: 80px solid transparent;
-    border-bottom: 140px solid rgba(0,212,170,0.06);
-    top: 180px; left: 60px;
-  }}
-  /* Teal left accent bar */
-  .accent-bar {{
-    position: absolute; left: 0; top: 0; bottom: 0;
-    width: 5px;
-    background: linear-gradient(180deg, #00d4aa 0%, #0066ff 100%);
-  }}
-  /* Main content area */
-  .content {{
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    text-align: center;
-    width: 860px;
-    display: flex; flex-direction: column; align-items: center; gap: 18px;
-  }}
-  .logo {{
-    height: 52px;
-    margin-bottom: 4px;
-    object-fit: contain;
-  }}
-  .tag {{
-    display: inline-block;
-    font-size: 10px; font-weight: 700; letter-spacing: 3px;
-    text-transform: uppercase; color: #00d4aa;
-    border: 1px solid rgba(0,212,170,0.35);
-    padding: 5px 18px; border-radius: 20px;
-  }}
-  /* Plain solid-colour heading — avoids invisible gradient-clip text in PDF */
-  h1 {{
-    font-size: 50px; font-weight: 800; line-height: 1.18;
-    color: #ffffff;
-    text-shadow: 0 2px 20px rgba(0,0,0,0.5);
-  }}
-  .divider {{
-    width: 56px; height: 3px;
-    background: linear-gradient(90deg, #00d4aa, #0066ff);
-    border-radius: 2px;
-  }}
-  .subtitle {{
-    font-size: 17px; color: #a0b8d0; font-weight: 400;
-    line-height: 1.6; max-width: 620px;
-  }}
-  /* Footer */
-  .footer {{
-    position: absolute; bottom: 0; left: 0; right: 0;
-    background: rgba(0,0,0,0.25);
-    border-top: 1px solid rgba(255,255,255,0.08);
-    padding: 16px 60px;
-    display: flex; justify-content: space-between; align-items: center;
-  }}
-  .footer-left {{ font-size: 12px; color: #8a9ab0; }}
-  .footer-right {{ font-size: 11px; color: #5a6a7a; }}
+:root {{
+  --bg-gradient: linear-gradient(135deg,#061551 0%,#0a4d8f 50%,#0e68b3 100%);
+  --accent-gradient: linear-gradient(135deg,#3b82f6 0%,#06b6d4 100%);
+  --white: #ffffff;
+  --blue-100: #dbeafe; --blue-200: #bfdbfe; --blue-300: #93c5fd;
+  --cyan-400: #22d3ee; --cyan-300: #67e8f9;
+}}
+body {{ margin:0; width:1280px; height:720px; overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  color:#fff; }}
+.container {{ width:1280px; height:720px; background:var(--bg-gradient); position:relative; overflow:hidden; }}
+.bg-blob {{ position:absolute; border-radius:50%; filter:blur(64px); }}
+.blob-1 {{ top:-10%; right:-5%; width:500px; height:500px; background:#60a5fa; opacity:.15; }}
+.blob-2 {{ bottom:-10%; left:-5%; width:450px; height:450px; background:#22d3ee; opacity:.15; }}
+.blob-3 {{ top:30%; right:10%; width:300px; height:300px; background:#3b82f6; opacity:.10; }}
+.geometric {{ position:absolute; border:2px solid; opacity:.2; }}
+.glass {{ background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); }}
+.badge {{ display:inline-flex; align-items:center; padding:8px 20px; border-radius:9999px; }}
+.dot {{ width:8px; height:8px; background:var(--cyan-400); border-radius:50%; margin-right:8px; }}
 </style>
 </head>
 <body>
-  <div class="accent-bar"></div>
-  <div class="geo geo-1"></div>
-  <div class="geo geo-2"></div>
-  <div class="geo geo-3"></div>
+<div class="container">
+  <div class="bg-blob blob-1"></div>
+  <div class="bg-blob blob-2"></div>
+  <div class="bg-blob blob-3"></div>
+  <div class="geometric" style="top:15%;right:20%;width:64px;height:64px;border-color:#60a5fa;transform:rotate(45deg);"></div>
+  <div class="geometric" style="bottom:25%;left:15%;width:80px;height:80px;border-color:#22d3ee;transform:rotate(12deg);"></div>
 
-  <div class="content">
-    {logo_tag}
-    <div class="tag">Financial Report</div>
-    <h1>{req.report_title}</h1>
-    <div class="divider"></div>
-    {subtitle_html}
+  <!-- Header -->
+  <div style="position:absolute;top:0;left:0;right:0;padding:32px 64px;display:flex;justify-content:space-between;align-items:center;z-index:20;">
+    <div style="display:flex;align-items:center;">
+      {logo_html}
+      <div>
+        <div style="font-size:24px;font-weight:700;color:white;letter-spacing:-.025em;">{company}</div>
+        <div style="font-size:12px;color:var(--blue-300);font-weight:500;letter-spacing:.05em;text-transform:uppercase;">FINANCIAL INTELLIGENCE</div>
+      </div>
+    </div>
+    <div class="glass" style="padding:8px 24px;border-radius:9999px;">
+      <span style="color:var(--blue-200);font-weight:600;font-size:14px;">{org}</span>
+    </div>
   </div>
 
-  <div class="footer">
-    <span class="footer-left">{footer_line}</span>
-    <span class="footer-right">{contact_line}</span>
+  <!-- Main content -->
+  <div style="position:relative;height:100%;display:flex;flex-direction:column;justify-content:center;padding:0 64px;z-index:10;">
+    <div style="max-width:1024px;">
+      <div class="glass badge" style="margin-bottom:32px;">
+        <div class="dot"></div>
+        <span style="color:var(--cyan-300);font-weight:700;font-size:14px;letter-spacing:.1em;text-transform:uppercase;">Financial Report</span>
+      </div>
+      <h1 style="font-size:72px;font-weight:900;color:white;line-height:1.1;margin:0 0 32px;letter-spacing:-.025em;">{req.report_title}</h1>
+      {"" if not subtitle else f'<div style="display:flex;align-items:center;margin-bottom:40px;"><div style="width:6px;height:64px;background:var(--accent-gradient);border-radius:9999px;margin-right:20px;box-shadow:0 10px 15px -3px rgba(59,130,246,.5);"></div><h2 style="font-size:30px;font-weight:700;color:var(--blue-100);line-height:1.25;margin:0;">{subtitle}</h2></div>'}
+      <!-- Metadata row -->
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div class="glass" style="display:flex;align-items:center;padding:12px 20px;border-radius:12px;">
+          <svg style="width:24px;height:24px;color:var(--cyan-400);margin-right:12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <div><div style="font-size:12px;color:var(--blue-300);font-weight:500;">Report Date</div><div style="font-weight:700;color:white;">{date}</div></div>
+        </div>
+        <div class="glass" style="display:flex;align-items:center;padding:12px 20px;border-radius:12px;">
+          <svg style="width:24px;height:24px;color:var(--cyan-400);margin-right:12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <div><div style="font-size:12px;color:var(--blue-300);font-weight:500;">Document Type</div><div style="font-weight:700;color:white;">Executive Summary</div></div>
+        </div>
+        <div class="glass" style="display:flex;align-items:center;padding:12px 20px;border-radius:12px;">
+          <svg style="width:24px;height:24px;color:var(--cyan-400);margin-right:12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          <div><div style="font-size:12px;color:var(--blue-300);font-weight:500;">Prepared By</div><div style="font-weight:700;color:white;">{prepared_by}</div></div>
+        </div>
+      </div>
+    </div>
   </div>
+
+  <!-- Footer -->
+  <div style="position:absolute;bottom:0;left:0;right:0;padding:24px 64px;background:linear-gradient(to right,rgba(0,0,0,.4),rgba(0,0,0,.3),rgba(0,0,0,.4));border-top:1px solid rgba(255,255,255,.1);display:flex;justify-content:space-between;align-items:center;">
+    <div style="display:flex;align-items:center;color:var(--blue-100);font-size:14px;gap:48px;">
+      {"" if not email else f'<div style="display:flex;align-items:center;"><svg style="width:16px;height:16px;color:var(--cyan-400);margin-right:8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg><span style="font-weight:600;">{email}</span></div>'}
+      {"" if not website else f'<div style="display:flex;align-items:center;"><svg style="width:16px;height:16px;color:var(--cyan-400);margin-right:8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg><span style="font-weight:600;">{website}</span></div>'}
+    </div>
+    <div style="display:flex;align-items:center;">
+      <div style="width:8px;height:8px;background:var(--cyan-400);border-radius:50%;margin-right:12px;"></div>
+      <span style="font-size:14px;opacity:.7;color:white;">Confidential</span>
+    </div>
+  </div>
+</div>
 </body>
 </html>"""
 
 
-_CHART_JS_CDN = "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"
+# ── KPI / Root-cause chart slide ──────────────────────────────────────────────
 
-
-def _chart_script(chart_data, canvas_id: str = "myChart") -> str:
-    """Build the Chart.js initialisation <script> block."""
-    labels_json = json.dumps(chart_data.labels)
-    values_json = json.dumps(chart_data.values)
-    chart_type = chart_data.chart_type  # "bar" or "line"
-
-    is_bar = chart_type == "bar"
-    bg_color = "#00d4aa" if is_bar else "rgba(0,212,170,0.15)"
-    fill_config = "false" if is_bar else "true"
-    tension = "0" if is_bar else "0.4"
-    border_radius = 4 if is_bar else 0
-    point_radius = 0 if is_bar else 3
-
-    # Set window.__chartReady = true in animation.onComplete so Playwright
-    # can poll for it instead of relying on a fixed timeout.
-    return f"""
-const ctx = document.getElementById('{canvas_id}').getContext('2d');
-new Chart(ctx, {{
-  type: '{chart_type}',
-  data: {{
-    labels: {labels_json},
-    datasets: [{{
-      label: '',
-      data: {values_json},
-      backgroundColor: '{bg_color}',
-      borderColor: '#00d4aa',
-      borderWidth: 2,
-      borderRadius: {border_radius},
-      fill: {fill_config},
-      tension: {tension},
-      pointBackgroundColor: '#00d4aa',
-      pointRadius: {point_radius},
-    }}]
-  }},
-  options: {{
-    animation: {{
-      onComplete: function() {{ window.__chartReady = true; }}
-    }},
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {{ legend: {{ display: false }} }},
-    scales: {{
-      x: {{
-        ticks: {{ color: '#a0aec0', font: {{ size: 11 }}, maxRotation: 45 }},
-        grid: {{ color: 'rgba(255,255,255,0.06)' }}
-      }},
-      y: {{
-        ticks: {{ color: '#a0aec0', font: {{ size: 11 }} }},
-        grid: {{ color: 'rgba(255,255,255,0.06)' }}
-      }}
-    }}
-  }}
-}});"""
-
-
-def _kpi_slide_html(slide: SlidePayload) -> str:
-    bullets_html = "".join(
-        f'<li><span class="bullet-dot"></span>{bp}</li>'
-        for bp in slide.bullet_points
-    )
-
-    # KPI slides don't have chart_data on SlidePayload (description only) —
-    # but the spec says KPI slides use kpi.chart_data from the original SlideInput.
-    # Since GeneratePDFRequest.slides is List[SlidePayload] which has no chart_data,
-    # we render the left panel only. Chart data is on root cause slides.
-    # (If you want to add chart_data to SlidePayload in future, hook it in here.)
-    return f"""<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>
-  * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-  body {{
-    width: 1280px; height: 720px; overflow: hidden;
-    background: #0f1117;
-    font-family: 'Inter', 'Segoe UI', sans-serif; color: #fff;
-    display: flex;
-  }}
-  .left {{
-    width: 100%; padding: 70px 80px;
-    display: flex; flex-direction: column; justify-content: center;
-  }}
-  .kpi-name {{
-    font-size: 12px; font-weight: 700; letter-spacing: 2.5px;
-    text-transform: uppercase; color: #00d4aa; margin-bottom: 20px;
-  }}
-  h2 {{ font-size: 36px; font-weight: 800; margin-bottom: 24px; line-height: 1.25; max-width: 700px; }}
-  .desc {{ font-size: 16px; color: #a0aec0; line-height: 1.75; margin-bottom: 32px; max-width: 720px; }}
-  .bullets {{ list-style: none; display: flex; flex-direction: column; gap: 12px; }}
-  .bullets li {{
-    display: flex; gap: 12px; align-items: flex-start;
-    font-size: 14px; color: #cbd5e0; line-height: 1.5;
-  }}
-  .bullet-dot {{
-    width: 7px; height: 7px; border-radius: 50%;
-    background: #00d4aa; margin-top: 6px; flex-shrink: 0;
-  }}
-  .accent-line {{
-    width: 48px; height: 3px;
-    background: linear-gradient(90deg, #00d4aa, #0066ff);
-    border-radius: 2px; margin-bottom: 28px;
-  }}
-</style>
-</head>
-<body>
-  <div class="left">
-    <div class="kpi-name">{slide.kpi_name}</div>
-    <div class="accent-line"></div>
-    <h2>{slide.title}</h2>
-    <p class="desc">{slide.description}</p>
-    <ul class="bullets">{bullets_html}</ul>
-  </div>
-</body>
-</html>"""
+_CDN_CHARTJS   = "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"
+_CDN_DATALABELS = "https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"
 
 
 def _kpi_chart_slide_html(
@@ -300,70 +173,281 @@ def _kpi_chart_slide_html(
     title: str,
     description: str,
     bullet_points: List[str],
-    chart_data,
+    chart_data: ChartData,
     breadcrumb: str | None = None,
 ) -> str:
-    bullets_html = "".join(
-        f'<li><span class="bullet-dot"></span>{bp}</li>'
-        for bp in bullet_points
-    )
+    labels_json = json.dumps(chart_data.labels)
+    values_json = json.dumps(chart_data.values)
+    chart_type  = chart_data.chart_type
+
+    # Derive a "latest value" to show prominently on left panel
+    latest_val  = chart_data.values[-1] if chart_data.values else 0
+    latest_label = chart_data.labels[-1] if chart_data.labels else ""
+    latest_fmt  = _fmt_value(latest_val)
+
+    bullets_html = "".join([
+        f'''<div style="display:flex;align-items:start;background:white;border-radius:8px;padding:12px;
+                box-shadow:0 1px 2px rgba(0,0,0,.05);margin-bottom:8px;">
+              <div style="flex-shrink:0;width:24px;height:24px;border-radius:8px;
+                  background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;
+                  justify-content:center;margin-right:12px;">
+                <svg style="width:12px;height:12px;color:white;" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+              <span style="font-size:12px;font-weight:600;color:#374151;padding-top:2px;">{bp}</span>
+            </div>'''
+        for bp in bullet_points[:4]
+    ])
+
     breadcrumb_html = (
-        f'<div class="breadcrumb">{breadcrumb}</div>' if breadcrumb else ""
+        f'<div style="display:inline-block;padding:4px 12px;background:rgba(96,165,250,.2);'
+        f'border-radius:9999px;margin-bottom:8px;border:1px solid rgba(147,197,253,.3);">'
+        f'<span style="color:#dbeafe;font-weight:700;font-size:11px;text-transform:uppercase;'
+        f'letter-spacing:.08em;">{breadcrumb}</span></div>'
+        if breadcrumb else
+        '<div style="display:inline-block;padding:6px 16px;background:rgba(96,165,250,.2);'
+        'border-radius:9999px;margin-bottom:16px;border:1px solid rgba(147,197,253,.3);">'
+        '<span style="color:#dbeafe;font-weight:700;font-size:12px;text-transform:uppercase;'
+        'letter-spacing:.1em;">METRIC ANALYSIS</span></div>'
     )
+
+    # Bar chart config for the secondary chart on the right panel
+    bar_bg = "'#3b82f6'" if chart_type == "bar" else "'#2563eb'"
 
     return f"""<!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
+<script src="{_CDN_CHARTJS}"></script>
+<script src="{_CDN_DATALABELS}"></script>
 <style>
-  * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-  body {{
-    width: 1280px; height: 720px; overflow: hidden;
-    background: #0f1117;
-    font-family: 'Inter', 'Segoe UI', sans-serif; color: #fff;
-    display: flex;
-  }}
-  .left {{
-    width: 50%; padding: 60px 50px;
-    display: flex; flex-direction: column; justify-content: center;
-  }}
-  .right {{
-    width: 50%; padding: 40px;
-    display: flex; align-items: center; justify-content: center;
-    background: #161b27;
-  }}
-  .kpi-name {{
-    font-size: 12px; font-weight: 700; letter-spacing: 2.5px;
-    text-transform: uppercase; color: #00d4aa; margin-bottom: 16px;
-  }}
-  h2 {{ font-size: 28px; font-weight: 700; margin-bottom: 20px; line-height: 1.3; }}
-  .desc {{ font-size: 14px; color: #a0aec0; line-height: 1.7; margin-bottom: 24px; }}
-  .bullets {{ list-style: none; display: flex; flex-direction: column; gap: 10px; }}
-  .bullets li {{
-    display: flex; gap: 10px; align-items: flex-start;
-    font-size: 13px; color: #cbd5e0;
-  }}
-  .bullet-dot {{
-    width: 6px; height: 6px; border-radius: 50%;
-    background: #00d4aa; margin-top: 5px; flex-shrink: 0;
-  }}
-  .breadcrumb {{ font-size: 11px; color: #4a5568; margin-bottom: 12px; }}
-  canvas {{ max-width: 100%; max-height: 560px; }}
+  @keyframes slideIn {{ from {{ opacity:0; transform:translateY(20px); }} to {{ opacity:1; transform:translateY(0); }} }}
+  @keyframes pulse-glow {{ 0%,100% {{ opacity:1; box-shadow:0 0 20px rgba(96,165,250,.6); }} 50% {{ opacity:.7; box-shadow:0 0 30px rgba(96,165,250,.9); }} }}
 </style>
 </head>
-<body>
-  <div class="left">
+<body style="margin:0;width:1280px;height:720px;overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#000;">
+<div style="width:1280px;height:720px;background:white;display:flex;position:relative;">
+
+  <!-- LEFT PANEL (dark blue) -->
+  <div style="width:50%;background:linear-gradient(135deg,#0a1628 0%,#1e3a8a 50%,#1e40af 100%);
+      padding:32px 48px;color:white;position:relative;z-index:10;overflow:hidden;">
+    <div style="position:absolute;top:-50%;right:-50%;width:100%;height:100%;
+        background:radial-gradient(circle,rgba(96,165,250,.15) 0%,transparent 70%);"></div>
+    <div style="position:absolute;bottom:-30%;left:-30%;width:80%;height:80%;
+        background:radial-gradient(circle,rgba(147,197,253,.1) 0%,transparent 60%);"></div>
+
     {breadcrumb_html}
-    <div class="kpi-name">{kpi_name}</div>
-    <h2>{title}</h2>
-    <p class="desc">{description}</p>
-    <ul class="bullets">{bullets_html}</ul>
+    <h1 style="font-size:34px;font-weight:900;margin-bottom:12px;line-height:1.25;">{kpi_name if not breadcrumb else title}</h1>
+    {"" if breadcrumb else f'<p style="font-size:13px;font-weight:500;margin-bottom:10px;color:#dbeafe;">{title}</p>'}
+    <p style="font-size:12px;color:#93c5fd;line-height:1.6;margin-bottom:14px;">{description}</p>
+    <div style="width:96px;height:4px;background:linear-gradient(to right,#60a5fa,#22d3ee,#3b82f6);
+        margin-bottom:20px;border-radius:9999px;"></div>
+
+    <!-- Latest value — solid colour (no gradient-clip) -->
+    <div style="font-size:64px;font-weight:900;color:#60a5fa;margin-bottom:8px;
+        text-shadow:0 2px 8px rgba(96,165,250,.4);">{latest_fmt}</div>
+    <h2 style="font-size:18px;font-weight:700;margin-bottom:24px;color:#f8fafc;">{latest_label}</h2>
+
+    <!-- Mini sparkline -->
+    <div style="width:100%;height:110px;background:rgba(255,255,255,.1);
+        border:1px solid rgba(255,255,255,.2);border-radius:16px;padding:10px;
+        box-shadow:0 8px 32px rgba(0,0,0,.2);margin-bottom:16px;">
+      <canvas id="miniChart"></canvas>
+    </div>
+
+    <div style="position:absolute;top:32px;right:32px;width:16px;height:16px;
+        background:#22d3ee;border-radius:50%;animation:pulse-glow 2s ease-in-out infinite;"></div>
   </div>
-  <div class="right">
-    <canvas id="myChart"></canvas>
+
+  <!-- RIGHT PANEL (light) -->
+  <div style="width:50%;background:linear-gradient(to bottom right,#f9fafb,#f3f4f6);padding:28px 36px;position:relative;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <h3 style="font-size:18px;font-weight:900;color:#1f2937;margin:0;">Performance Trend</h3>
+      <div style="display:flex;align-items:center;gap:8px;background:white;padding:6px 12px;
+          border-radius:9999px;box-shadow:0 1px 2px rgba(0,0,0,.05);">
+        <div style="width:10px;height:10px;border-radius:50%;background:linear-gradient(to right,#3b82f6,#2563eb);"></div>
+        <span style="font-size:12px;font-weight:700;color:#374151;">{kpi_name}</span>
+      </div>
+    </div>
+    <!-- Main chart -->
+    <div style="height:200px;background:white;border-radius:16px;padding:16px;
+        border:1px solid rgba(0,0,0,.05);box-shadow:0 4px 6px -1px rgba(0,0,0,.05);margin-bottom:12px;">
+      <canvas id="myChart"></canvas>
+    </div>
+    <!-- Secondary bar chart -->
+    <div style="height:100px;background:white;border-radius:16px;padding:10px;
+        border:1px solid rgba(0,0,0,.05);box-shadow:0 4px 6px -1px rgba(0,0,0,.05);margin-bottom:12px;">
+      <canvas id="barChart"></canvas>
+    </div>
+    <!-- Bullets -->
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      {bullets_html}
+    </div>
   </div>
-  <script src="{_CHART_JS_CDN}"></script>
-  <script>{_chart_script(chart_data)}</script>
+
+  <div style="position:absolute;bottom:0;left:0;right:0;height:6px;
+      background:linear-gradient(to right,#2563eb,#06b6d4,#2563eb);"></div>
+</div>
+
+<script>
+window.addEventListener('load', function() {{
+  setTimeout(function() {{
+    Chart.register(ChartDataLabels);
+    Chart.defaults.font.family = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+
+    const labels = {labels_json};
+    const values = {values_json};
+
+    // Main line/bar chart
+    const ctx = document.getElementById('myChart').getContext('2d');
+    new Chart(ctx, {{
+      type: '{chart_type}',
+      data: {{
+        labels: labels,
+        datasets: [{{
+          label: '{kpi_name}',
+          data: values,
+          borderColor: '#2563eb',
+          backgroundColor: '{chart_type}' === 'bar' ? '#2563eb' : 'rgba(37,99,235,.1)',
+          borderWidth: 3,
+          pointRadius: 5,
+          pointBackgroundColor: '#2563eb',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          tension: 0.4,
+          fill: '{chart_type}' !== 'bar',
+          borderRadius: 4,
+        }}]
+      }},
+      options: {{
+        responsive: true, maintainAspectRatio: false,
+        layout: {{ padding: {{ top: 28, right: 10, bottom: 8, left: 8 }} }},
+        plugins: {{
+          legend: {{ display: false }},
+          datalabels: {{
+            display: true, align: 'top', anchor: 'end', offset: 4,
+            color: '#1e40af',
+            backgroundColor: 'rgba(255,255,255,.95)',
+            borderRadius: 4, borderWidth: 1, borderColor: '#3b82f6',
+            padding: 3,
+            font: {{ size: 9, weight: '800' }},
+            formatter: function(v) {{
+              if (Math.abs(v) >= 1000000) return '$'+(v/1000000).toFixed(1)+'M';
+              if (Math.abs(v) >= 1000)    return '$'+(v/1000).toFixed(0)+'K';
+              return '$'+v.toLocaleString();
+            }}
+          }},
+          tooltip: {{ backgroundColor: 'rgba(15,23,42,.95)', padding: 10, cornerRadius: 8 }}
+        }},
+        scales: {{
+          y: {{ beginAtZero: true, grace: '15%', ticks: {{ font: {{ size: 9 }}, color: '#64748b' }},
+                grid: {{ color: 'rgba(0,0,0,.05)' }}, border: {{ display: false }} }},
+          x: {{ ticks: {{ font: {{ size: 9 }}, color: '#64748b' }},
+                grid: {{ display: false }}, border: {{ display: false }} }}
+        }}
+      }}
+    }});
+
+    // Secondary bar chart
+    const barCtx = document.getElementById('barChart').getContext('2d');
+    new Chart(barCtx, {{
+      type: 'bar',
+      data: {{
+        labels: labels,
+        datasets: [{{ data: values, backgroundColor: {bar_bg}, borderRadius: 4 }}]
+      }},
+      options: {{
+        responsive: true, maintainAspectRatio: false,
+        plugins: {{ legend: {{ display: false }}, datalabels: {{ display: false }} }},
+        scales: {{
+          y: {{ display: true, beginAtZero: true, ticks: {{ font: {{ size: 8 }}, color: '#64748b' }},
+                grid: {{ display: false }}, border: {{ display: false }} }},
+          x: {{ ticks: {{ font: {{ size: 8 }}, color: '#64748b' }},
+                grid: {{ display: false }}, border: {{ display: false }} }}
+        }}
+      }}
+    }});
+
+    // Mini sparkline (left panel)
+    const miniCtx = document.getElementById('miniChart').getContext('2d');
+    new Chart(miniCtx, {{
+      type: 'line',
+      data: {{
+        labels: labels,
+        datasets: [{{
+          data: values,
+          borderColor: '#60a5fa',
+          backgroundColor: 'rgba(96,165,250,.2)',
+          borderWidth: 3, pointRadius: 0, tension: 0.4, fill: true
+        }}]
+      }},
+      options: {{
+        responsive: true, maintainAspectRatio: false,
+        plugins: {{ legend: {{ display: false }}, datalabels: {{ display: false }} }},
+        scales: {{ y: {{ display: false, beginAtZero: true }}, x: {{ display: false }} }},
+        animation: {{ onComplete: function() {{ window.__chartReady = true; }} }}
+      }}
+    }});
+  }}, 500);
+}});
+</script>
+</body>
+</html>"""
+
+
+def _kpi_text_slide_html(slide: SlidePayload) -> str:
+    """Text-only KPI slide (when no root causes have chart data)."""
+    bullets_html = "".join([
+        f'''<div style="display:flex;align-items:start;background:white;border-radius:8px;padding:14px;
+                box-shadow:0 1px 2px rgba(0,0,0,.05);margin-bottom:10px;">
+              <div style="flex-shrink:0;width:28px;height:28px;border-radius:8px;
+                  background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;
+                  justify-content:center;margin-right:14px;">
+                <svg style="width:14px;height:14px;color:white;" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+              <span style="font-size:14px;font-weight:600;color:#374151;padding-top:3px;">{bp}</span>
+            </div>'''
+        for bp in slide.bullet_points[:5]
+    ])
+
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+</head>
+<body style="margin:0;width:1280px;height:720px;overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#000;">
+<div style="width:1280px;height:720px;background:white;display:flex;position:relative;">
+
+  <!-- LEFT PANEL -->
+  <div style="width:50%;background:linear-gradient(135deg,#0a1628 0%,#1e3a8a 50%,#1e40af 100%);
+      padding:40px 56px;color:white;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:center;">
+    <div style="position:absolute;top:-50%;right:-50%;width:100%;height:100%;
+        background:radial-gradient(circle,rgba(96,165,250,.15) 0%,transparent 70%);"></div>
+
+    <div style="display:inline-block;padding:6px 16px;background:rgba(96,165,250,.2);
+        border-radius:9999px;margin-bottom:20px;border:1px solid rgba(147,197,253,.3);">
+      <span style="color:#dbeafe;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.1em;">METRIC ANALYSIS</span>
+    </div>
+    <h1 style="font-size:40px;font-weight:900;margin-bottom:16px;line-height:1.2;">{slide.kpi_name}</h1>
+    <div style="width:96px;height:4px;background:linear-gradient(to right,#60a5fa,#22d3ee);margin-bottom:24px;border-radius:9999px;"></div>
+    <p style="font-size:16px;color:#dbeafe;line-height:1.65;margin:0;">{slide.description}</p>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div style="width:50%;background:linear-gradient(to bottom right,#f9fafb,#f3f4f6);
+      padding:40px 48px;display:flex;flex-direction:column;justify-content:center;">
+    <h2 style="font-size:22px;font-weight:900;color:#1f2937;margin-bottom:24px;">{slide.title}</h2>
+    {bullets_html}
+  </div>
+
+  <div style="position:absolute;bottom:0;left:0;right:0;height:6px;
+      background:linear-gradient(to right,#2563eb,#06b6d4,#2563eb);"></div>
+</div>
 </body>
 </html>"""
 
@@ -372,23 +456,19 @@ def _kpi_chart_slide_html(
 
 async def generate_pdf_from_slides(request: GeneratePDFRequest) -> str:
     """
-    Build one HTML page per slide, render via Playwright, merge into one PDF.
-    Returns the filename (not full path) of the merged PDF saved under /static/.
+    Renders all slides to PDF using Playwright and merges them with PyPDF2.
+    Returns the filename (not full path) saved under /static/.
     """
-    # Build ordered list of (html, has_chart) tuples
+    # Build ordered page list: (html, has_chart)
     html_pages: List[tuple[str, bool]] = []
 
-    # Slide 0: title
     html_pages.append((_title_html(request), False))
 
     for slide in request.slides:
-        # Check if any root causes have chart_data — if so, render KPI slide
-        # with a chart using the first root cause's data as a proxy.
-        # If no root causes, render text-only KPI slide.
         rc_with_charts = [rc for rc in slide.root_causes if rc.chart_data is not None]
 
         if rc_with_charts:
-            # KPI summary slide: use first root cause chart as the main chart
+            # Use first root cause chart on the KPI summary slide
             first_rc = rc_with_charts[0]
             html = _kpi_chart_slide_html(
                 kpi_name=slide.kpi_name,
@@ -399,10 +479,8 @@ async def generate_pdf_from_slides(request: GeneratePDFRequest) -> str:
             )
             html_pages.append((html, True))
         else:
-            # Text-only KPI slide
-            html_pages.append((_kpi_slide_html(slide), False))
+            html_pages.append((_kpi_text_slide_html(slide), False))
 
-        # Root cause slides
         for rc in slide.root_causes:
             if rc.chart_data is None:
                 continue
@@ -416,7 +494,6 @@ async def generate_pdf_from_slides(request: GeneratePDFRequest) -> str:
             )
             html_pages.append((html, True))
 
-    # Render via Playwright
     tmp = tempfile.mkdtemp()
     pdf_files: List[str] = []
 
@@ -434,18 +511,15 @@ async def generate_pdf_from_slides(request: GeneratePDFRequest) -> str:
                         await page.wait_for_load_state("networkidle")
 
                         if has_chart:
-                            # Poll for window.__chartReady set by Chart.js animation.onComplete.
-                            # Falls back after 8s if the flag never arrives.
+                            # Wait for Chart.js animation.onComplete to set window.__chartReady
                             try:
                                 await page.wait_for_function(
                                     "() => window.__chartReady === true",
                                     timeout=8000,
                                 )
                             except Exception:
-                                # Timeout — give one last fixed wait and continue
                                 await page.wait_for_timeout(3000)
                         else:
-                            # Text/title slides: wait for full paint (fonts, images, CSS)
                             await page.wait_for_timeout(1500)
 
                         slide_pdf = os.path.join(tmp, f"slide_{i}.pdf")
@@ -463,7 +537,6 @@ async def generate_pdf_from_slides(request: GeneratePDFRequest) -> str:
             finally:
                 await browser.close()
 
-        # Merge PDFs
         merged_path = os.path.join(tmp, "merged.pdf")
         merger = PdfMerger()
         for pf in pdf_files:
@@ -471,13 +544,11 @@ async def generate_pdf_from_slides(request: GeneratePDFRequest) -> str:
         merger.write(merged_path)
         merger.close()
 
-        # Save to /static/
         static_dir = Path("static")
         static_dir.mkdir(exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"report_{timestamp}.pdf"
-        dest = static_dir / filename
-        shutil.copy(merged_path, str(dest))
+        shutil.copy(merged_path, str(static_dir / filename))
 
         return filename
 
@@ -486,3 +557,4 @@ async def generate_pdf_from_slides(request: GeneratePDFRequest) -> str:
 
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+
