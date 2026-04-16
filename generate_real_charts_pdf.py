@@ -2036,3 +2036,225 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# ---------------------------------------------------------------------------
+# Root Cause Analysis slide — used by the new /generate endpoint
+# ---------------------------------------------------------------------------
+
+def generate_root_cause_html(kpi_name: str, root_causes: list, kpi_description: str = "") -> str:
+    """
+    Generate a 'Why Did This Happen?' slide for a KPI.
+
+    Layout:
+      - Dark-gradient header: KPI name + short description
+      - Card row below: 1-3 chart cards side by side (one per root cause)
+      - Thin gradient footer bar
+
+    Each root cause card contains:
+      - Root cause name (title)
+      - Chart.js bar/pie/doughnut/line chart built from chart_data
+      - 1-2 bullet points
+
+    Args:
+        kpi_name:        e.g. "Income"
+        root_causes:     list of dicts (or RootCauseContent) with keys:
+                           name, description, bullet_points, chart_data
+                         chart_data has keys: labels, values, chart_type
+        kpi_description: short overview text shown in the header
+    """
+    # Normalise to plain dicts so this works with both Pydantic objects and dicts
+    def _as_dict(obj):
+        if hasattr(obj, "model_dump"):
+            return obj.model_dump()
+        if hasattr(obj, "dict"):
+            return obj.dict()
+        return obj if isinstance(obj, dict) else {}
+
+    root_causes = [_as_dict(rc) for rc in root_causes[:3]]
+    num_charts = len(root_causes)
+    if num_charts == 0:
+        return ""
+
+    accent_colors = ["#3b82f6", "#06b6d4", "#8b5cf6"]  # blue, cyan, purple
+
+    # ---- Build each chart card ----
+    chart_cards_html_parts = []
+    chart_scripts_parts = []
+
+    for i, rc in enumerate(root_causes):
+        rc_name = rc.get("name", f"Root Cause {i + 1}")
+        rc_description = rc.get("description", "")
+        rc_bullets = rc.get("bullet_points", [])
+        chart_data_raw = rc.get("chart_data") or {}
+        if hasattr(chart_data_raw, "model_dump"):
+            chart_data_raw = chart_data_raw.model_dump()
+
+        labels = chart_data_raw.get("labels", [])
+        values = chart_data_raw.get("values", [])
+        chart_type = chart_data_raw.get("chart_type", "bar")
+        has_data = bool(labels and values)
+
+        canvas_id = f"rcChart{i}"
+        color = accent_colors[i % len(accent_colors)]
+
+        # Truncate long description
+        short_desc = (rc_description[:110] + "…") if len(rc_description) > 110 else rc_description
+
+        # Bullet HTML (show max 2)
+        bullets_html = "".join([
+            f'<div class="flex items-start gap-1 text-xs text-gray-600 leading-snug">'
+            f'<span class="text-blue-500 mt-px flex-shrink-0">•</span>'
+            f'<span>{b}</span></div>'
+            for b in rc_bullets[:2]
+        ])
+
+        chart_area = (
+            f'<canvas id="{canvas_id}" class="w-full h-full"></canvas>'
+            if has_data
+            else '<div class="flex items-center justify-center h-full text-gray-400 text-sm italic">No chart data</div>'
+        )
+
+        chart_cards_html_parts.append(f"""
+        <div class="bg-white rounded-2xl shadow-md flex flex-col overflow-hidden" style="flex:1;min-width:0">
+            <div class="px-4 pt-4 pb-2 border-b border-gray-100">
+                <div class="text-xs font-bold text-gray-800 leading-snug">{rc_name}</div>
+            </div>
+            <div class="flex-1 relative px-3 pt-2" style="min-height:210px">
+                {chart_area}
+            </div>
+            <div class="px-4 py-3 space-y-1">
+                <p class="text-xs text-gray-500 leading-snug">{short_desc}</p>
+                {bullets_html}
+            </div>
+        </div>""")
+
+        if has_data:
+            labels_json = json.dumps(labels)
+            values_json = json.dumps(values)
+
+            if chart_type in ("pie", "doughnut"):
+                bg_colors_json = json.dumps([
+                    "#3b82f6", "#06b6d4", "#8b5cf6", "#f59e0b", "#ef4444", "#10b981",
+                ])
+                chart_scripts_parts.append(f"""
+                new Chart(document.getElementById('{canvas_id}').getContext('2d'), {{
+                    type: '{chart_type}',
+                    data: {{
+                        labels: {labels_json},
+                        datasets: [{{
+                            data: {values_json},
+                            backgroundColor: {bg_colors_json},
+                            borderWidth: 2,
+                            borderColor: '#fff'
+                        }}]
+                    }},
+                    options: {{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {{
+                            legend: {{ position: 'right', labels: {{ font: {{ size: 10 }}, boxWidth: 12 }} }},
+                            datalabels: {{ display: false }}
+                        }}
+                    }}
+                }});""")
+            else:
+                # bar or line
+                dataset_extra = (
+                    f"fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '{color}',"
+                    if chart_type == "line"
+                    else f"borderRadius: 6, borderSkipped: false,"
+                )
+                chart_scripts_parts.append(f"""
+                new Chart(document.getElementById('{canvas_id}').getContext('2d'), {{
+                    type: '{chart_type}',
+                    data: {{
+                        labels: {labels_json},
+                        datasets: [{{
+                            data: {values_json},
+                            backgroundColor: '{color}33',
+                            borderColor: '{color}',
+                            borderWidth: 2,
+                            {dataset_extra}
+                        }}]
+                    }},
+                    options: {{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {{
+                            legend: {{ display: false }},
+                            datalabels: {{ display: false }}
+                        }},
+                        scales: {{
+                            y: {{
+                                grid: {{ color: 'rgba(0,0,0,0.05)' }},
+                                ticks: {{ font: {{ size: 10 }}, color: '#64748b' }}
+                            }},
+                            x: {{
+                                grid: {{ display: false }},
+                                ticks: {{ font: {{ size: 10 }}, color: '#64748b', maxRotation: 35 }}
+                            }}
+                        }}
+                    }}
+                }});""")
+
+    charts_grid = "\n".join(chart_cards_html_parts)
+    all_scripts = "\n".join(chart_scripts_parts)
+
+    short_kpi_desc = (kpi_description[:140] + "…") if len(kpi_description) > 140 else kpi_description
+
+    return f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        * {{ font-family: 'Inter', sans-serif; box-sizing: border-box; }}
+        body {{ margin:0; width:1280px; height:720px; overflow:hidden; background:#f1f5f9; }}
+        canvas {{ image-rendering:-webkit-optimize-contrast; image-rendering:crisp-edges; }}
+    </style>
+</head>
+<body>
+<div class="w-[1280px] h-[720px] flex flex-col">
+
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#0a1628 0%,#1e3a8a 50%,#1e40af 100%)"
+         class="px-10 py-5 text-white flex items-start justify-between flex-shrink-0">
+        <div>
+            <div class="text-xs font-bold text-blue-300 tracking-widest uppercase mb-1">
+                Root Cause Analysis
+            </div>
+            <h1 class="text-2xl font-black text-white leading-tight">
+                {kpi_name} — Why Did This Happen?
+            </h1>
+        </div>
+        <p class="text-sm text-blue-200 max-w-lg text-right leading-snug mt-1">
+            {short_kpi_desc}
+        </p>
+    </div>
+
+    <!-- Charts row -->
+    <div class="flex-1 p-5 flex gap-5 overflow-hidden">
+        {charts_grid}
+    </div>
+
+    <!-- Footer accent -->
+    <div class="h-1.5 flex-shrink-0"
+         style="background:linear-gradient(90deg,#2563eb,#06b6d4,#2563eb)"></div>
+
+</div>
+
+<script>
+    window.addEventListener('load', function() {{
+        setTimeout(function() {{
+            Chart.register(ChartDataLabels);
+            Chart.defaults.font.family = "'Inter', sans-serif";
+            {all_scripts}
+        }}, 500);
+    }});
+</script>
+</body>
+</html>"""
