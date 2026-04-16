@@ -1,7 +1,7 @@
 """
 Financial data models for report generation.
 """
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from pydantic import BaseModel, Field
 from datetime import datetime
 
@@ -27,6 +27,7 @@ class KPISlideSelection(BaseModel):
     """One KPI the user selected, with its chosen root causes."""
     kpi_name: str                                       # e.g. "Income"
     root_causes: List[RootCauseSelection] = []
+    chart_data: Optional[ChartDataPoint] = None         # KPI-level time-series (from Xero)
 
 
 class GenerateSlideContentRequest(BaseModel):

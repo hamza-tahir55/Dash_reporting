@@ -222,10 +222,13 @@ Return ONLY valid JSON — no markdown fences, no extra text — in this exact s
         cleaned = re.sub(r"\s*```$", "", cleaned, flags=re.MULTILINE)
         parsed = json.loads(cleaned)
 
-        # Build lookup: kpi_name → {rc_name → chart_data} so we can reattach
-        chart_lookup: dict = {}
+        # Build lookups so we can reattach chart data to the AI-generated content
+        rc_chart_lookup: dict = {}    # kpi_name → {rc_name → chart_data}
+        kpi_chart_lookup: dict = {}   # kpi_name → chart_data (KPI-level time series)
         for sel in request.selected_slides:
-            chart_lookup[sel.kpi_name] = {rc.name: rc.chart_data for rc in sel.root_causes}
+            rc_chart_lookup[sel.kpi_name] = {rc.name: rc.chart_data for rc in sel.root_causes}
+            if sel.chart_data:
+                kpi_chart_lookup[sel.kpi_name] = sel.chart_data
 
         slides: List[SlideContent] = []
         for sd in parsed.get("slides", []):
@@ -237,7 +240,7 @@ Return ONLY valid JSON — no markdown fences, no extra text — in this exact s
                         name=rc_d["name"],
                         description=rc_d.get("description", ""),
                         bullet_points=rc_d.get("bullet_points", []),
-                        chart_data=chart_lookup.get(kpi, {}).get(rc_d["name"]),
+                        chart_data=rc_chart_lookup.get(kpi, {}).get(rc_d["name"]),
                     )
                 )
             slides.append(
@@ -247,6 +250,7 @@ Return ONLY valid JSON — no markdown fences, no extra text — in this exact s
                     description=sd.get("description", ""),
                     bullet_points=sd.get("bullet_points", []),
                     root_causes=root_causes,
+                    chart_data=kpi_chart_lookup.get(kpi),
                 )
             )
 
@@ -393,6 +397,22 @@ async def generate_presentation(request: FinancialDataRequest):
                 )
                 print(f"🌐 Browser initialised in {time.time() - browser_start:.2f}s")
 
+                # Warm up Tailwind CDN so it is fully cached before the first real slide.
+                # Without this the title slide (first set_content call) is captured before
+                # Tailwind's JIT processing completes, leaving it blank.
+                print("🔥 Warming up Tailwind CDN...")
+                await page.set_content(
+                    '<!DOCTYPE html><html><head>'
+                    '<script src="https://cdn.tailwindcss.com"></script>'
+                    '</head><body class="bg-white">'
+                    '<div class="absolute top-0 left-0 right-0 flex justify-between items-center'
+                    ' px-16 py-8 z-20 text-2xl font-bold text-gray-800">warmup</div>'
+                    '</body></html>'
+                )
+                await page.wait_for_load_state('networkidle')
+                await page.wait_for_timeout(3000)
+                print("✅ Tailwind CDN ready")
+
                 for i, slide_info in enumerate(html_slides, 1):
                     slide_start = time.time()
                     await page.set_content(slide_info['html'])
@@ -516,6 +536,20 @@ export default BusinessDashboardSlide;'''
                     viewport={"width": 1280, "height": 720}, device_scale_factor=2
                 )
                 print(f"🌐 Browser initialised in {time.time() - browser_start:.2f}s")
+
+                # Warm up Tailwind CDN cache before rendering the first slide
+                print("🔥 Warming up Tailwind CDN...")
+                await page.set_content(
+                    '<!DOCTYPE html><html><head>'
+                    '<script src="https://cdn.tailwindcss.com"></script>'
+                    '</head><body class="bg-white">'
+                    '<div class="absolute top-0 left-0 right-0 flex justify-between items-center'
+                    ' px-16 py-8 z-20 text-2xl font-bold text-gray-800">warmup</div>'
+                    '</body></html>'
+                )
+                await page.wait_for_load_state('networkidle')
+                await page.wait_for_timeout(3000)
+                print("✅ Tailwind CDN ready")
 
                 for i, tsx_file in enumerate(sorted_files, 1):
                     slide_start = time.time()
