@@ -6,59 +6,6 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 
 
-# ---------------------------------------------------------------------------
-# New models for the KPI-selection / slide-content flow
-# ---------------------------------------------------------------------------
-
-class ChartDataPoint(BaseModel):
-    """Chart data sent from the frontend (from Xero API)."""
-    labels: List[str] = []
-    values: List[float] = []
-    chart_type: Optional[str] = "bar"   # bar | line | pie | doughnut
-
-
-class RootCauseSelection(BaseModel):
-    """A single root-cause section the user selected for a KPI."""
-    name: str                                    # e.g. "Top Customers by Value Spend"
-    chart_data: Optional[ChartDataPoint] = None  # Chart data from the frontend
-
-
-class KPISlideSelection(BaseModel):
-    """One KPI the user selected, with its chosen root causes."""
-    kpi_name: str                                       # e.g. "Income"
-    root_causes: List[RootCauseSelection] = []
-    chart_data: Optional[ChartDataPoint] = None         # KPI-level time-series (from Xero)
-
-
-class GenerateSlideContentRequest(BaseModel):
-    """Request body for POST /generate-slide-content."""
-    financial_text: str                                 # The AI summary already generated
-    selected_slides: List[KPISlideSelection]
-
-
-class RootCauseContent(BaseModel):
-    """AI-generated content for a single root cause, returned to the frontend."""
-    name: str
-    description: str
-    bullet_points: List[str] = []
-    chart_data: Optional[ChartDataPoint] = None         # Passed through unchanged
-
-
-class SlideContent(BaseModel):
-    """AI-generated content for a single KPI slide (editable by the user)."""
-    kpi_name: str
-    title: str
-    description: str
-    bullet_points: List[str] = []
-    root_causes: List[RootCauseContent] = []
-    chart_data: Optional[ChartDataPoint] = None  # KPI-level time-series chart data
-
-
-class GenerateSlideContentResponse(BaseModel):
-    """Response body for POST /generate-slide-content."""
-    slides: List[SlideContent]
-
-
 class FinancialMetric(BaseModel):
     """Represents a single financial metric data point."""
     date: str
