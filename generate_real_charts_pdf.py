@@ -432,38 +432,9 @@ def generate_cashflow_waterfall_html(data):
 <html>
 <head>
     <meta charset="UTF-8">
-    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        * {{ font-family: 'Inter', sans-serif; }}
-        body {{ margin:0; width:1280px; height:720px; overflow:hidden; background:#000 }}
-        .gradient-left {{ 
-            background:linear-gradient(135deg,#0a1628 0%,#1e3a8a 50%,#1e40af 100%);
-            position:relative;
-            overflow:hidden;
-        }}
-        .gradient-left::before {{
-            content:'';
-            position:absolute;
-            top:-50%;
-            right:-50%;
-            width:100%;
-            height:100%;
-            background:radial-gradient(circle,rgba(96,165,250,0.15) 0%,transparent 70%);
-            animation:float 8s ease-in-out infinite;
-        }}
-        .gradient-left::after {{
-            content:'';
-            position:absolute;
-            bottom:-30%;
-            left:-30%;
-            width:80%;
-            height:80%;
-            background:radial-gradient(circle,rgba(147,197,253,0.1) 0%,transparent 60%);
-            animation:float 6s ease-in-out infinite reverse;
-        }}
         @keyframes float {{
             0%, 100% {{ transform:translate(0,0) scale(1); }}
             50% {{ transform:translate(-20px,20px) scale(1.1); }}
@@ -476,164 +447,132 @@ def generate_cashflow_waterfall_html(data):
             from {{ opacity:0; transform:translateY(20px); }}
             to {{ opacity:1; transform:translateY(0); }}
         }}
-        .animate-slide-in {{ animation:slideIn 0.6s ease-out forwards; }}
-        .delay-1 {{ animation-delay:0.1s; opacity:0; }}
-        .delay-2 {{ animation-delay:0.2s; opacity:0; }}
-        .delay-3 {{ animation-delay:0.3s; opacity:0; }}
-        .delay-4 {{ animation-delay:0.4s; opacity:0; }}
-        .glass-card {{
-            background:rgba(255,255,255,0.95);
-            backdrop-filter:blur(10px);
-            border:1px solid rgba(255,255,255,0.3);
-            box-shadow:0 8px 32px rgba(0,0,0,0.08);
-        }}
-        .stat-card {{
-            background:linear-gradient(135deg,rgba(255,255,255,0.1) 0%,rgba(255,255,255,0.05) 100%);
-            backdrop-filter:blur(10px);
-            border:1px solid rgba(255,255,255,0.2);
-            transition:all 0.3s ease;
-        }}
-        .stat-card:hover {{
-            background:linear-gradient(135deg,rgba(255,255,255,0.15) 0%,rgba(255,255,255,0.08) 100%);
-            transform:translateY(-2px);
-            box-shadow:0 8px 24px rgba(0,0,0,0.2);
-        }}
-        canvas {{ image-rendering:-webkit-optimize-contrast; image-rendering:crisp-edges }}
-        .metric-number {{
-            background:linear-gradient(135deg,#60a5fa 0%,#3b82f6 50%,#2563eb 100%);
-            -webkit-background-clip:text;
-            -webkit-text-fill-color:transparent;
-            background-clip:text;
-            filter:drop-shadow(0 2px 4px rgba(59,130,246,0.3));
-        }}
     </style>
 </head>
-<body>
-    <div class="w-[1280px] h-[720px] bg-white flex relative">
+<body style="margin: 0; width: 1280px; height: 720px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #000;">
+    <div style="width: 1280px; height: 720px; background: white; display: flex; position: relative;">
         <!-- Left Panel -->
-        <div class="w-1/2 gradient-left px-12 py-8 text-white relative z-10">
-            <div class="inline-block px-4 py-1.5 bg-blue-400 bg-opacity-20 rounded-full mb-4 animate-slide-in border border-blue-300 border-opacity-30">
-                <span class="text-blue-100 font-bold text-xs tracking-widest">CASH FLOW ANALYSIS</span>
-            </div>
-            <h1 class="text-4xl font-black mb-3 animate-slide-in delay-1 leading-tight">{data['title']}</h1>
-            <p class="text-sm font-medium mb-4 text-blue-100 animate-slide-in delay-2">{data['subtitle']}</p>
-            <div class="w-24 h-1 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 mb-6 rounded-full animate-slide-in delay-2"></div>
+        <div style="width: 50%; background: linear-gradient(135deg, #0a1628 0%, #1e3a8a 50%, #1e40af 100%); padding: 32px 48px; color: white; position: relative; z-index: 10; overflow: hidden;">
+            <div style="position: absolute; top: -50%; right: -50%; width: 100%; height: 100%; background: radial-gradient(circle, rgba(96, 165, 250, 0.15) 0%, transparent 70%); animation: float 8s ease-in-out infinite;"></div>
+            <div style="position: absolute; bottom: -30%; left: -30%; width: 80%; height: 80%; background: radial-gradient(circle, rgba(147, 197, 253, 0.1) 0%, transparent 60%); animation: float 6s ease-in-out infinite reverse;"></div>
             
-            <div class="animate-slide-in delay-3">
-                <div class="text-7xl font-black metric-number mb-3">{format_currency(net_cash)}</div>
-                <h2 class="text-xl font-bold mb-6 text-blue-50">Net Cash Increase</h2>
+            <div style="display: inline-block; padding: 6px 16px; background: rgba(96, 165, 250, 0.2); border-radius: 9999px; margin-bottom: 16px; border: 1px solid rgba(147, 197, 253, 0.3); animation: slideIn 0.6s ease-out forwards;">
+                <span style="color: #dbeafe; font-weight: 700; font-size: 12px; tracking: 0.1em; text-transform: uppercase;">CASH FLOW ANALYSIS</span>
+            </div>
+            <h1 style="font-size: 36px; font-weight: 900; margin-bottom: 12px; line-height: 1.25; animation: slideIn 0.6s ease-out 0.1s forwards; opacity: 0;">{data['title']}</h1>
+            <p style="font-size: 14px; font-weight: 500; margin-bottom: 16px; color: #dbeafe; animation: slideIn 0.6s ease-out 0.2s forwards; opacity: 0;">{data['subtitle']}</p>
+            <div style="width: 96px; height: 4px; background: linear-gradient(to right, #60a5fa, #22d3ee, #3b82f6); margin-bottom: 24px; border-radius: 9999px; animation: slideIn 0.6s ease-out 0.2s forwards; opacity: 0;"></div>
+            
+            <div style="animation: slideIn 0.6s ease-out 0.3s forwards; opacity: 0;">
+                <div style="font-size: 72px; font-weight: 900; background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 12px; filter: drop-shadow(0 2px 4px rgba(59,130,246,0.3));">{format_currency(net_cash)}</div>
+                <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 24px; color: #f8fafc;">Net Cash Increase</h2>
             </div>
 
-            <div class="mb-6 animate-slide-in delay-4">
-                <div class="grid grid-cols-3 gap-3">
-                    <div class="stat-card rounded-xl p-3">
-                        <div class="text-xs font-bold text-green-200 mb-1">Operating</div>
-                        <div class="text-2xl font-black text-white">{format_currency(total_operating)}</div>
+            <div style="margin-bottom: 24px; animation: slideIn 0.6s ease-out 0.4s forwards; opacity: 0;">
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                    <div style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 12px;">
+                        <div style="font-size: 12px; font-weight: 700; color: #bbf7d0; margin-bottom: 4px;">Operating</div>
+                        <div style="font-size: 24px; font-weight: 900; color: white;">{format_currency(total_operating)}</div>
                     </div>
-                    <div class="stat-card rounded-xl p-3">
-                        <div class="text-xs font-bold text-amber-200 mb-1">Investing</div>
-                        <div class="text-2xl font-black text-white">{format_currency(total_investing)}</div>
+                    <div style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 12px;">
+                        <div style="font-size: 12px; font-weight: 700; color: #fde68a; margin-bottom: 4px;">Investing</div>
+                        <div style="font-size: 24px; font-weight: 900; color: white;">{format_currency(total_investing)}</div>
                     </div>
-                    <div class="stat-card rounded-xl p-3">
-                        <div class="text-xs font-bold text-red-200 mb-1">Financing</div>
-                        <div class="text-2xl font-black text-white">{format_currency(total_financing)}</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="animate-slide-in delay-4">
-                <div class="space-y-2">
-                    <div class="flex items-center justify-between stat-card rounded-lg p-2.5">
-                        <div class="flex items-center space-x-2">
-                            <div class="w-3 h-3 rounded-full bg-green-400"></div>
-                            <span class="text-sm font-semibold text-white">Operating Activities</span>
-                        </div>
-                        <span class="text-sm font-bold text-green-300">{format_currency_signed(total_operating)}</span>
-                    </div>
-                    <div class="flex items-center justify-between stat-card rounded-lg p-2.5">
-                        <div class="flex items-center space-x-2">
-                            <div class="w-3 h-3 rounded-full bg-amber-400"></div>
-                            <span class="text-sm font-semibold text-white">Investing Activities</span>
-                        </div>
-                        <span class="text-sm font-bold text-amber-300">{format_currency_signed(total_investing)}</span>
-                    </div>
-                    <div class="flex items-center justify-between stat-card rounded-lg p-2.5">
-                        <div class="flex items-center space-x-2">
-                            <div class="w-3 h-3 rounded-full bg-red-400"></div>
-                            <span class="text-sm font-semibold text-white">Financing Activities</span>
-                        </div>
-                        <span class="text-sm font-bold text-red-300">{format_currency_signed(total_financing)}</span>
-                    </div>
-                    <div class="flex items-center justify-between stat-card rounded-lg p-2.5 border-2 border-cyan-400">
-                        <div class="flex items-center space-x-2">
-                            <div class="w-3 h-3 rounded-full bg-cyan-400"></div>
-                            <span class="text-sm font-semibold text-white">Net Cash Change</span>
-                        </div>
-                        <span class="text-sm font-bold text-cyan-300">{format_currency_signed(net_cash)}</span>
+                    <div style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 12px; padding: 12px;">
+                        <div style="font-size: 12px; font-weight: 700; color: #fecaca; margin-bottom: 4px;">Financing</div>
+                        <div style="font-size: 24px; font-weight: 900; color: white;">{format_currency(total_financing)}</div>
                     </div>
                 </div>
             </div>
             
-            <div class="absolute top-8 right-8 w-4 h-4 bg-cyan-400 rounded-full" style="animation:pulse-glow 2s ease-in-out infinite"></div>
-            <div class="absolute bottom-12 left-8 w-3 h-3 bg-blue-400 rounded-full opacity-60"></div>
-            <div class="absolute top-1/3 right-16 w-2 h-2 bg-blue-300 rounded-full opacity-40"></div>
+            <div style="animation: slideIn 0.6s ease-out 0.4s forwards; opacity: 0;">
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 10px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 12px; height: 12px; border-radius: 50%; background: #4ade80;"></div>
+                            <span style="font-size: 14px; font-weight: 600;">Operating Activities</span>
+                        </div>
+                        <span style="font-size: 14px; font-weight: 700; color: #86efac;">{format_currency_signed(total_operating)}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 10px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 12px; height: 12px; border-radius: 50%; background: #fbbf24;"></div>
+                            <span style="font-size: 14px; font-weight: 600;">Investing Activities</span>
+                        </div>
+                        <span style="font-size: 14px; font-weight: 700; color: #fcd34d;">{format_currency_signed(total_investing)}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 10px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 12px; height: 12px; border-radius: 50%; background: #f87171;"></div>
+                            <span style="font-size: 14px; font-weight: 600;">Financing Activities</span>
+                        </div>
+                        <span style="font-size: 14px; font-weight: 700; color: #fca5a5;">{format_currency_signed(total_financing)}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 10px; border: 2px solid #22d3ee;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div style="width: 12px; height: 12px; border-radius: 50%; background: #22d3ee;"></div>
+                            <span style="font-size: 14px; font-weight: 600;">Net Cash Change</span>
+                        </div>
+                        <span style="font-size: 14px; font-weight: 700; color: #67e8f9;">{format_currency_signed(net_cash)}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="position: absolute; top: 32px; right: 32px; width: 16px; height: 16px; background: #22d3ee; border-radius: 50%; animation: pulse-glow 2s ease-in-out infinite;"></div>
         </div>
         
         <!-- Right Panel -->
-        <div class="w-1/2 bg-gradient-to-br from-gray-50 to-gray-100 px-10 py-8 relative">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-black text-gray-800">Performance Trend</h3>
-                <div class="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-full shadow-sm">
-                    <div class="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500"></div>
-                    <span class="text-xs font-bold text-gray-700">Component View</span>
+        <div style="width: 50%; background: linear-gradient(to bottom right, #f9fafb, #f3f4f6); padding: 32px 40px; position: relative;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                <h3 style="font-size: 18px; font-weight: 900; color: #1f2937; margin: 0;">Performance Trend</h3>
+                <div style="display: flex; align-items: center; gap: 8px; background: white; padding: 6px 12px; border-radius: 9999px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <div style="width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(to right, #3b82f6, #06b6d4);"></div>
+                    <span style="font-size: 12px; font-weight: 700; color: #374151;">Component View</span>
                 </div>
             </div>
-            <div class="h-[500px] glass-card rounded-2xl shadow-lg p-5 mb-4 animate-slide-in delay-2">
+            <div style="height: 500px; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.08); padding: 20px; margin-bottom: 16px; animation: slideIn 0.6s ease-out 0.2s forwards; opacity: 0;">
                 <canvas id="waterfallChart"></canvas>
             </div>
-            <div class="flex items-center justify-between animate-slide-in delay-3">
-                <div class="flex items-center space-x-4">
-                    <div class="flex items-center space-x-2">
-                        <div class="w-3 h-3 rounded-sm bg-green-500"></div>
-                        <span class="text-xs font-semibold text-gray-700">Operating</span>
+            <div style="display: flex; align-items: center; justify-content: space-between; animation: slideIn 0.6s ease-out 0.3s forwards; opacity: 0;">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 12px; height: 12px; border-radius: 2px; background: #22c55e;"></div>
+                        <span style="font-size: 12px; font-weight: 600; color: #374151;">Operating</span>
                     </div>
-                    <div class="flex items-center space-x-2">
-                        <div class="w-3 h-3 rounded-sm bg-amber-500"></div>
-                        <span class="text-xs font-semibold text-gray-700">Investing</span>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 12px; height: 12px; border-radius: 2px; background: #f59e0b;"></div>
+                        <span style="font-size: 12px; font-weight: 600; color: #374151;">Investing</span>
                     </div>
-                    <div class="flex items-center space-x-2">
-                        <div class="w-3 h-3 rounded-sm bg-red-500"></div>
-                        <span class="text-xs font-semibold text-gray-700">Financing</span>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 12px; height: 12px; border-radius: 2px; background: #ef4444;"></div>
+                        <span style="font-size: 12px; font-weight: 600; color: #374151;">Financing</span>
                     </div>
-                    <div class="flex items-center space-x-2">
-                        <div class="w-3 h-3 rounded-sm bg-cyan-500"></div>
-                        <span class="text-xs font-semibold text-gray-700">Net Change</span>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 12px; height: 12px; border-radius: 2px; background: #06b6d4;"></div>
+                        <span style="font-size: 12px; font-weight: 600; color: #374151;">Net Change</span>
                     </div>
                 </div>
-                <div class="text-xs text-gray-500 font-medium">{unit_text}</div>
+                <div style="font-size: 12px; font-weight: 500; color: #6b7280;">{unit_text}</div>
             </div>
         </div>
-        <div class="absolute bottom-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-cyan-400 to-blue-600"></div>
+        <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 6px; background: linear-gradient(to right, #2563eb, #06b6d4, #2563eb);"></div>
     </div>
 
     <script>
         window.addEventListener('load', function() {{
             setTimeout(function() {{
                 Chart.register(ChartDataLabels);
-                Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+                Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
-                // Quarterly data
                 const quarters = {json.dumps(quarters)};
                 const operatingData = {json.dumps(operating_data)};
                 const investingData = {json.dumps(investing_data)};
                 const financingData = {json.dumps(financing_data)};
                 
-                // Calculate net cash for each quarter
                 const netCashData = quarters.map((_, i) => 
                     operatingData[i] + investingData[i] + financingData[i]
                 );
 
-                // Dynamic formatting function based on value magnitude
                 function formatCurrency(value) {{
                     const absValue = Math.abs(value);
                     if (absValue >= 1000000) {{
@@ -650,49 +589,28 @@ def generate_cashflow_waterfall_html(data):
                     return prefix + formatCurrency(value);
                 }}
 
-                // Function to clean up date labels - keep full date for period display
-                function cleanDateLabel(dateStr) {{
-                    // Return the original date string for period labels
-                    return dateStr;
-                }}
-
-                // Create waterfall data structure
                 const waterfallData = [];
                 const colors = [];
                 const labels = [];
 
                 quarters.forEach((quarter, i) => {{
                     let runningTotal = 0;
-                    
-                    // Operating (base)
-                    labels.push('');  // Empty label
+                    labels.push('');
                     waterfallData.push([0, operatingData[i]]);
                     colors.push('#22c55e');
-                    
                     runningTotal = operatingData[i];
-                    
-                    // Investing (stack on operating)
-                    labels.push(quarter);  // Center label on middle bar
+                    labels.push(quarter);
                     waterfallData.push([runningTotal, runningTotal + investingData[i]]);
                     colors.push('#f59e0b');
-                    
                     runningTotal += investingData[i];
-                    
-                    // Financing (stack on investing)
-                    labels.push('');  // Empty label
+                    labels.push('');
                     waterfallData.push([runningTotal, runningTotal + financingData[i]]);
                     colors.push('#ef4444');
-                    
                     runningTotal += financingData[i];
-                    
-                    // Net Cash (final bar)
-                    labels.push('');  // Empty label
+                    labels.push('');
                     waterfallData.push([0, netCashData[i]]);
                     colors.push('#06b6d4');
                 }});
-
-                // Debug: Log the labels to console
-                console.log('Generated labels:', labels);
 
                 const ctx = document.getElementById('waterfallChart').getContext('2d');
                 new Chart(ctx, {{
@@ -710,27 +628,18 @@ def generate_cashflow_waterfall_html(data):
                     options: {{
                         responsive: true,
                         maintainAspectRatio: false,
-                        layout: {{
-                            padding: {{
-                                top: 30,
-                                right: 10,
-                                bottom: 10,
-                                left: 10
-                            }}
-                        }},
+                        layout: {{ padding: {{ top: 30, right: 10, bottom: 10, left: 10 }} }},
                         plugins: {{
                             legend: {{ display: false }},
                             datalabels: {{
                                 display: true,
                                 anchor: function(context) {{
                                     const value = context.dataset.data[context.dataIndex];
-                                    const diff = value[1] - value[0];
-                                    return diff >= 0 ? 'end' : 'start';
+                                    return (value[1] - value[0]) >= 0 ? 'end' : 'start';
                                 }},
                                 align: function(context) {{
                                     const value = context.dataset.data[context.dataIndex];
-                                    const diff = value[1] - value[0];
-                                    return diff >= 0 ? 'top' : 'bottom';
+                                    return (value[1] - value[0]) >= 0 ? 'top' : 'bottom';
                                 }},
                                 offset: 4,
                                 color: '#1e293b',
@@ -738,38 +647,22 @@ def generate_cashflow_waterfall_html(data):
                                 borderRadius: 4,
                                 borderWidth: 1,
                                 borderColor: '#e2e8f0',
-                                padding: {{
-                                    top: 4,
-                                    bottom: 4,
-                                    left: 8,
-                                    right: 8
-                                }},
-                                font: {{
-                                    size: 11,
-                                    weight: '700',
-                                    family: "'Inter', sans-serif"
-                                }},
+                                padding: {{ top: 4, bottom: 4, left: 8, right: 8 }},
+                                font: {{ size: 11, weight: '700' }},
                                 formatter: function(value) {{
-                                    const diff = value[1] - value[0];
-                                    return formatCurrencySigned(diff);
+                                    return formatCurrencySigned(value[1] - value[0]);
                                 }}
                             }},
                             tooltip: {{
                                 backgroundColor: 'rgba(15, 23, 42, 0.95)',
                                 padding: 14,
-                                titleFont: {{ size: 13, weight: 'bold' }},
-                                bodyFont: {{ size: 12 }},
                                 cornerRadius: 8,
                                 displayColors: false,
                                 callbacks: {{
-                                    title: function(context) {{
-                                        return context[0].label.replace('\\n', ' - ');
-                                    }},
+                                    title: function(context) {{ return context[0].label; }},
                                     label: function(context) {{
-                                        const value = context.parsed.y;
                                         const raw = context.dataset.data[context.dataIndex];
-                                        const diff = raw[1] - raw[0];
-                                        return 'Amount: ' + formatCurrency(diff);
+                                        return 'Amount: ' + formatCurrency(raw[1] - raw[0]);
                                     }}
                                 }}
                             }}
@@ -777,28 +670,12 @@ def generate_cashflow_waterfall_html(data):
                         scales: {{
                             y: {{
                                 beginAtZero: true,
-                                ticks: {{
-                                    callback: function(value) {{
-                                        return formatCurrency(value);
-                                    }},
-                                    font: {{ size: 11, weight: '600' }},
-                                    color: '#64748b'
-                                }},
-                                grid: {{
-                                    color: 'rgba(0, 0, 0, 0.06)',
-                                    lineWidth: 1
-                                }},
+                                ticks: {{ callback: function(value) {{ return formatCurrency(value); }}, font: {{ size: 11, weight: '600' }}, color: '#64748b' }},
+                                grid: {{ color: 'rgba(0, 0, 0, 0.06)', lineWidth: 1 }},
                                 border: {{ display: false }}
                             }},
                             x: {{
-                                ticks: {{
-                                    font: {{ size: 10, weight: '600' }},
-                                    color: '#64748b',
-                                    maxRotation: 0,
-                                    minRotation: 0,
-                                    autoSkip: false,
-                                    maxTicksLimit: false
-                                }},
+                                ticks: {{ font: {{ size: 10, weight: '600' }}, color: '#64748b', maxRotation: 0 }},
                                 grid: {{ display: false }},
                                 border: {{ display: false }}
                             }}
@@ -816,209 +693,113 @@ def generate_statistic_html_with_real_chart(data):
     """Generate premium statistic slide with enhanced visuals and REAL Chart.js chart."""
     # Generate bullet points with enhanced styling
     bullets_html = ''.join([
-        f'''<div class="flex items-start bg-white rounded-lg p-3 shadow-sm hover:shadow-md transition-all duration-300 group">
-                <div class="flex-shrink-0 w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mr-3 group-hover:scale-110 transition-transform">
-                    <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+        f'''<div style="display: flex; align-items: start; background: white; border-radius: 8px; padding: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); margin-bottom: 8px; transition: all 0.3s ease;">
+                <div style="flex-shrink: 0; width: 24px; height: 24px; border-radius: 8px; background: linear-gradient(135deg, #3b82f6, #2563eb); display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                    <svg style="width: 12px; height: 12px; color: white;" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                     </svg>
                 </div>
-                <span class="text-xs font-semibold text-gray-700 pt-0.5">{bullet}</span>
+                <span style="font-size: 12px; font-weight: 600; color: #374151; padding-top: 2px;">{bullet}</span>
             </div>'''
         for bullet in data['bullets'][:4]
     ])
     
-    # Build KPI cards from parsed KPI fields - ONLY show ONE relevant comparison
+    # Build KPI cards from parsed KPI fields - show only ONE relevant comparison
     kpi_cards = []
-    print(f"   🔍 KPI Data Check: prev='{data.get('kpi_prev_percent')}', yoy='{data.get('kpi_yoy_percent')}'")
-    
-    # Prioritize the main comparison (usually MoM/QoQ) over YoY - show only ONE card
     if data.get('kpi_prev_percent'):
         kpi_cards.append(f'''
-                <div class="stat-card rounded-xl p-3">
-                    <div class="text-2xl font-black text-white mb-1">{data['kpi_prev_percent']}</div>
-                    <div class="text-xs font-semibold text-blue-200 uppercase tracking-wide">{data.get('kpi_prev_label', 'vs Previous')}</div>
+                <div style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 12px; min-width: 120px;">
+                    <div style="font-size: 24px; font-weight: 900; color: white; margin-bottom: 4px;">{data['kpi_prev_percent']}</div>
+                    <div style="font-size: 10px; font-weight: 600; color: #bfdbfe; text-transform: uppercase; letter-spacing: 0.05em;">{data.get('kpi_prev_label', 'vs Previous')}</div>
                 </div>''')
-        print(f"   ✅ Added Primary KPI card: {data['kpi_prev_percent']} ({data.get('kpi_prev_label')})")
     elif data.get('kpi_yoy_percent'):
-        # Only show YoY if no primary comparison exists
         kpi_cards.append(f'''
-                <div class="stat-card rounded-xl p-3">
-                    <div class="text-2xl font-black text-white mb-1">{data['kpi_yoy_percent']}</div>
-                    <div class="text-xs font-semibold text-blue-200 uppercase tracking-wide">{data.get('kpi_yoy_label', 'YoY')}</div>
+                <div style="background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); border-radius: 12px; padding: 12px; min-width: 120px;">
+                    <div style="font-size: 24px; font-weight: 900; color: white; margin-bottom: 4px;">{data['kpi_yoy_percent']}</div>
+                    <div style="font-size: 10px; font-weight: 600; color: #bfdbfe; text-transform: uppercase; letter-spacing: 0.05em;">{data.get('kpi_yoy_label', 'YoY')}</div>
                 </div>''')
-        print(f"   ✅ Added YoY KPI card: {data['kpi_yoy_percent']} ({data.get('kpi_yoy_label')})")
     
     kpi_cards_html = ('\n'.join(kpi_cards)) if kpi_cards else ''
     
-    if not kpi_cards_html:
-        print(f"   ⚠️  NO KPI CARDS generated - no KPI data found")
-    
-    # Use ONLY actual data from TSX - NO FALLBACKS, NO HARDCODED DATA
+    # Use actual data from TSX
     if data['chart_data'] and len(data['chart_data']) > 0:
         labels = [point.get('name', '') for point in data['chart_data']]
         values = [point.get('series1', 0) for point in data['chart_data']]
         chart_data_json = json.dumps({'labels': labels, 'values': values})
-        print(f"   ✅ Using {len(labels)} real data points from TSX")
     else:
-        # NO DATA - Show empty chart with message
-        chart_data_json = json.dumps({
-            'labels': ['No Data'],
-            'values': [0]
-        })
-        print(f"   ⚠️  NO DATA FOUND - AI did not extract chart data for {data.get('title', 'this metric')}")
+        chart_data_json = json.dumps({'labels': ['No Data'], 'values': [0]})
     
     return f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        * {{ font-family: 'Inter', sans-serif; }}
-        body {{ margin:0; width:1280px; height:720px; overflow:hidden; background:#000 }}
-        .gradient-left {{ 
-            background:linear-gradient(135deg,#0a1628 0%,#1e3a8a 50%,#1e40af 100%);
-            position:relative;
-            overflow:hidden;
-        }}
-        .gradient-left::before {{
-            content:'';
-            position:absolute;
-            top:-50%;
-            right:-50%;
-            width:100%;
-            height:100%;
-            background:radial-gradient(circle,rgba(96,165,250,0.15) 0%,transparent 70%);
-            animation:float 8s ease-in-out infinite;
-        }}
-        .gradient-left::after {{
-            content:'';
-            position:absolute;
-            bottom:-30%;
-            left:-30%;
-            width:80%;
-            height:80%;
-            background:radial-gradient(circle,rgba(147,197,253,0.1) 0%,transparent 60%);
-            animation:float 6s ease-in-out infinite reverse;
-        }}
-        @keyframes float {{
-            0%, 100% {{ transform:translate(0,0) scale(1); }}
-            50% {{ transform:translate(-20px,20px) scale(1.1); }}
-        }}
-        @keyframes pulse-glow {{
-            0%, 100% {{ opacity:1; box-shadow:0 0 20px rgba(96,165,250,0.6); }}
-            50% {{ opacity:0.7; box-shadow:0 0 30px rgba(96,165,250,0.9); }}
-        }}
-        @keyframes slideIn {{
-            from {{ opacity:0; transform:translateY(20px); }}
-            to {{ opacity:1; transform:translateY(0); }}
-        }}
-        @keyframes shimmer {{
-            0% {{ background-position: -1000px 0; }}
-            100% {{ background-position: 1000px 0; }}
-        }}
-        .animate-slide-in {{ animation:slideIn 0.6s ease-out forwards; }}
-        .delay-1 {{ animation-delay:0.1s; opacity:0; }}
-        .delay-2 {{ animation-delay:0.2s; opacity:0; }}
-        .delay-3 {{ animation-delay:0.3s; opacity:0; }}
-        .delay-4 {{ animation-delay:0.4s; opacity:0; }}
-        .glass-card {{
-            background:rgba(255,255,255,0.95);
-            backdrop-filter:blur(10px);
-            border:1px solid rgba(255,255,255,0.3);
-            box-shadow:0 8px 32px rgba(0,0,0,0.08);
-        }}
-        .stat-card {{
-            background:linear-gradient(135deg,rgba(255,255,255,0.1) 0%,rgba(255,255,255,0.05) 100%);
-            backdrop-filter:blur(10px);
-            border:1px solid rgba(255,255,255,0.2);
-            transition:all 0.3s ease;
-        }}
-        .stat-card:hover {{
-            background:linear-gradient(135deg,rgba(255,255,255,0.15) 0%,rgba(255,255,255,0.08) 100%);
-            transform:translateY(-2px);
-            box-shadow:0 8px 24px rgba(0,0,0,0.2);
-        }}
-        canvas {{ image-rendering:-webkit-optimize-contrast; image-rendering:crisp-edges }}
-        .metric-number {{
-            background:linear-gradient(135deg,#60a5fa 0%,#3b82f6 50%,#2563eb 100%);
-            -webkit-background-clip:text;
-            -webkit-text-fill-color:transparent;
-            background-clip:text;
-            filter:drop-shadow(0 2px 4px rgba(59,130,246,0.3));
-        }}
+        @keyframes float {{ 0%, 100% {{ transform:translate(0,0) scale(1); }} 50% {{ transform:translate(-20px,20px) scale(1.1); }} }}
+        @keyframes pulse-glow {{ 0%, 100% {{ opacity:1; box-shadow:0 0 20px rgba(96,165,250,0.6); }} 50% {{ opacity:0.7; box-shadow:0 0 30px rgba(96,165,250,0.9); }} }}
+        @keyframes slideIn {{ from {{ opacity:0; transform:translateY(20px); }} to {{ opacity:1; transform:translateY(0); }} }}
     </style>
 </head>
-<body>
-    <div class="w-[1280px] h-[720px] bg-white flex relative">
+<body style="margin: 0; width: 1280px; height: 720px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #000;">
+    <div style="width: 1280px; height: 720px; background: white; display: flex; position: relative;">
         <!-- Left Panel -->
-        <div class="w-1/2 gradient-left px-12 py-8 text-white relative z-10">
-            <div class="inline-block px-4 py-1.5 bg-blue-400 bg-opacity-20 rounded-full mb-4 animate-slide-in border border-blue-300 border-opacity-30">
-                <span class="text-blue-100 font-bold text-xs tracking-widest">METRIC ANALYSIS</span>
-            </div>
-            <h1 class="text-4xl font-black mb-3 animate-slide-in delay-1 leading-tight">{data['title']}</h1>
-            <p class="text-sm font-medium mb-4 text-blue-100 animate-slide-in delay-2">{data['subtitle']}</p>
-            <div class="w-24 h-1 bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 mb-6 rounded-full animate-slide-in delay-2"></div>
+        <div style="width: 50%; background: linear-gradient(135deg, #0a1628 0%, #1e3a8a 50%, #1e40af 100%); padding: 32px 48px; color: white; position: relative; z-index: 10; overflow: hidden;">
+            <div style="position: absolute; top: -50%; right: -50%; width: 100%; height: 100%; background: radial-gradient(circle, rgba(96, 165, 250, 0.15) 0%, transparent 70%); animation: float 8s ease-in-out infinite;"></div>
+            <div style="position: absolute; bottom: -30%; left: -30%; width: 80%; height: 80%; background: radial-gradient(circle, rgba(147, 197, 253, 0.1) 0%, transparent 60%); animation: float 6s ease-in-out infinite reverse;"></div>
             
-            <div class="animate-slide-in delay-3">
-                <div class="text-7xl font-black metric-number mb-3">{data['value']}</div>
-                <h2 class="text-xl font-bold mb-6 text-blue-50">{data['label']}</h2>
+            <div style="display: inline-block; padding: 6px 16px; background: rgba(96, 165, 250, 0.2); border-radius: 9999px; margin-bottom: 16px; border: 1px solid rgba(147, 197, 253, 0.3); animation: slideIn 0.6s ease-out forwards;">
+                <span style="color: #dbeafe; font-weight: 700; font-size: 12px; tracking: 0.1em; text-transform: uppercase;">METRIC ANALYSIS</span>
+            </div>
+            <h1 style="font-size: 36px; font-weight: 900; margin-bottom: 12px; line-height: 1.25; animation: slideIn 0.6s ease-out 0.1s forwards; opacity: 0;">{data['title']}</h1>
+            <p style="font-size: 14px; font-weight: 500; margin-bottom: 16px; color: #dbeafe; animation: slideIn 0.6s ease-out 0.2s forwards; opacity: 0;">{data['subtitle']}</p>
+            <div style="width: 96px; height: 4px; background: linear-gradient(to right, #60a5fa, #22d3ee, #3b82f6); margin-bottom: 24px; border-radius: 9999px; animation: slideIn 0.6s ease-out 0.2s forwards; opacity: 0;"></div>
+            
+            <div style="animation: slideIn 0.6s ease-out 0.3s forwards; opacity: 0;">
+                <div style="font-size: 72px; font-weight: 900; background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 12px; filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.3));">{data['value']}</div>
+                <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 24px; color: #f8fafc;">{data['label']}</h2>
             </div>
 
-
-            {f'<div class="mb-6 animate-slide-in delay-4">{kpi_cards_html}</div>' if kpi_cards_html else ''}
+            {f'<div style="margin-bottom: 24px; display: flex; gap: 12px; animation: slideIn 0.6s ease-out 0.4s forwards; opacity: 0;">{kpi_cards_html}</div>' if kpi_cards_html else ''}
             
-            <div class="animate-slide-in delay-4">
-                <div class="w-full h-32 stat-card rounded-2xl p-3 shadow-2xl">
+            <div style="animation: slideIn 0.6s ease-out 0.4s forwards; opacity: 0;">
+                <div style="width: 100%; height: 128px; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 16px; padding: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
                     <canvas id="miniChart"></canvas>
                 </div>
             </div>
             
-            <div class="absolute top-8 right-8 w-4 h-4 bg-cyan-400 rounded-full" style="animation:pulse-glow 2s ease-in-out infinite"></div>
-            <div class="absolute bottom-12 left-8 w-3 h-3 bg-blue-400 rounded-full opacity-60"></div>
-            <div class="absolute top-1/3 right-16 w-2 h-2 bg-blue-300 rounded-full opacity-40"></div>
+            <div style="position: absolute; top: 32px; right: 32px; width: 16px; height: 16px; background: #22d3ee; border-radius: 50%; animation: pulse-glow 2s ease-in-out infinite;"></div>
         </div>
         
         <!-- Right Panel -->
-        <div class="w-1/2 bg-gradient-to-br from-gray-50 to-gray-100 px-10 py-8 relative">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-black text-gray-800">Performance Trend</h3>
-                <div class="flex items-center space-x-2 bg-white px-3 py-1.5 rounded-full shadow-sm">
-                    <div class="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-blue-500 to-blue-600"></div>
-                    <span class="text-xs font-bold text-gray-700">{data['title']}</span>
+        <div style="width: 50%; background: linear-gradient(to bottom right, #f9fafb, #f3f4f6); padding: 32px 40px; position: relative;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                <h3 style="font-size: 18px; font-weight: 900; color: #1f2937; margin: 0;">Performance Trend</h3>
+                <div style="display: flex; align-items: center; gap: 8px; background: white; padding: 6px 12px; border-radius: 9999px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <div style="width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(to right, #3b82f6, #2563eb);"></div>
+                    <span style="font-size: 12px; font-weight: 700; color: #374151;">{data['title']}</span>
                 </div>
             </div>
-            <div class="h-52 glass-card rounded-2xl shadow-lg p-5 mb-4 animate-slide-in delay-2">
+            <div style="height: 208px; background: white; border-radius: 16px; padding: 20px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; animation: slideIn 0.6s ease-out 0.2s forwards; opacity: 0;">
                 <canvas id="myChart"></canvas>
             </div>
-            <div class="h-28 glass-card rounded-2xl shadow-lg p-3 mb-4 animate-slide-in delay-3">
+            <div style="height: 112px; background: white; border-radius: 16px; padding: 12px; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; animation: slideIn 0.6s ease-out 0.3s forwards; opacity: 0;">
                 <canvas id="areaChart"></canvas>
             </div>
-            <div class="space-y-2 animate-slide-in delay-4">
+            <div style="display: flex; flex-direction: column; gap: 4px; animation: slideIn 0.6s ease-out 0.4s forwards; opacity: 0;">
                 {bullets_html}
             </div>
         </div>
-        <div class="absolute bottom-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-cyan-400 to-blue-600"></div>
+        <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 6px; background: linear-gradient(to right, #2563eb, #06b6d4, #2563eb);"></div>
     </div>
 
-
     <script>
-        // Wait for Chart.js to load
         window.addEventListener('load', function() {{
             setTimeout(function() {{
-                // Register datalabels plugin
                 Chart.register(ChartDataLabels);
-
-
-                // Set Chart.js defaults for high quality
-                Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-                Chart.defaults.plugins.legend.labels.usePointStyle = true;
-
+                Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
                 const chartData = {chart_data_json};
-
 
                 // Main Chart
                 const ctx = document.getElementById('myChart').getContext('2d');
@@ -1032,131 +813,8 @@ def generate_statistic_html_with_real_chart(data):
                             borderColor: '#2563eb',
                             backgroundColor: 'rgba(37, 99, 235, 0.1)',
                             borderWidth: 4,
-                            pointRadius: 8,
+                            pointRadius: 6,
                             pointBackgroundColor: '#2563eb',
-                            pointBorderColor: '#fff',
-                            pointBorderWidth: 3,
-                            pointHoverRadius: 10,
-                            pointHoverBorderWidth: 4,
-                            tension: 0.4,
-                            fill: true
-                        }}]
-                    }},
-                    options: {{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        layout: {{
-                            padding: {{
-                                top: 45,
-                                right: 20,
-                                bottom: 15,
-                                left: 10
-                            }}
-                        }},
-                        plugins: {{
-                            legend: {{
-                                display: false
-                            }},
-                            datalabels: {{
-                                display: true,
-                                align: 'top',
-                                anchor: 'end',
-                                offset: 8,
-                                color: '#1e40af',
-                                backgroundColor: 'rgba(255, 255, 255, 0.98)',
-                                borderRadius: 6,
-                                borderWidth: 2,
-                                borderColor: '#3b82f6',
-                                padding: {{
-                                    top: 6,
-                                    bottom: 6,
-                                    left: 10,
-                                    right: 10
-                                }},
-                                font: {{
-                                    size: 12,
-                                    weight: '800',
-                                    family: "'Inter', sans-serif"
-                                }},
-                                formatter: function(value) {{
-                                    if (value >= 1000000) {{
-                                        return '$' + (value / 1000000).toFixed(1) + 'M';
-                                    }} else if (value >= 1000) {{
-                                        return '$' + (value / 1000).toFixed(0) + 'K';
-                                    }}
-                                    return '$' + value.toLocaleString();
-                                }},
-                                clip: false
-                            }},
-                            tooltip: {{
-                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                                padding: 16,
-                                titleFont: {{ size: 15, weight: 'bold' }},
-                                bodyFont: {{ size: 14 }},
-                                cornerRadius: 8,
-                                displayColors: false,
-                                callbacks: {{
-                                    label: function(context) {{
-                                        return '$' + context.parsed.y.toLocaleString();
-                                    }}
-                                }}
-                            }}
-                        }},
-                        scales: {{
-                            y: {{
-                                beginAtZero: true,
-                                grace: '15%',
-                                ticks: {{
-                                    callback: function(value) {{
-                                        return '$' + (value/1000000).toFixed(1) + 'M';
-                                    }},
-                                    font: {{ size: 12, weight: '600' }},
-                                    color: '#64748b'
-                                }},
-                                grid: {{
-                                    color: 'rgba(0, 0, 0, 0.04)',
-                                    lineWidth: 1
-                                }},
-                                border: {{ display: false }}
-                            }},
-                            x: {{
-                                ticks: {{
-                                    font: {{ size: 12, weight: '600' }},
-                                    color: '#64748b'
-                                }},
-                                grid: {{
-                                    display: false
-                                }},
-                                border: {{ display: false }}
-                            }}
-                        }},
-                        interaction: {{
-                            intersect: false,
-                            mode: 'index'
-                        }}
-                    }}
-                }});
-
-
-                // Mini Area Chart on left side
-                const miniCtx = document.getElementById('miniChart').getContext('2d');
-                new Chart(miniCtx, {{
-                    type: 'line',
-                    data: {{
-                        labels: chartData.labels,
-                        datasets: [{{
-                            data: chartData.values,
-                            borderColor: '#60a5fa',
-                            backgroundColor: function(context) {{
-                                const ctx = context.chart.ctx;
-                                const gradient = ctx.createLinearGradient(0, 0, 0, 160);
-                                gradient.addColorStop(0, 'rgba(96, 165, 250, 0.5)');
-                                gradient.addColorStop(1, 'rgba(96, 165, 250, 0.05)');
-                                return gradient;
-                            }},
-                            borderWidth: 3,
-                            pointRadius: 4,
-                            pointBackgroundColor: '#60a5fa',
                             pointBorderColor: '#fff',
                             pointBorderWidth: 2,
                             tension: 0.4,
@@ -1166,29 +824,68 @@ def generate_statistic_html_with_real_chart(data):
                     options: {{
                         responsive: true,
                         maintainAspectRatio: false,
-                        plugins: {{ 
+                        layout: {{ padding: {{ top: 30, right: 10, bottom: 10, left: 10 }} }},
+                        plugins: {{
                             legend: {{ display: false }},
-                            datalabels: {{ display: false }},
+                            datalabels: {{
+                                display: true,
+                                align: 'top',
+                                anchor: 'end',
+                                offset: 4,
+                                color: '#1e40af',
+                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                borderRadius: 4,
+                                borderWidth: 1,
+                                borderColor: '#3b82f6',
+                                padding: 4,
+                                font: {{ size: 10, weight: '800' }},
+                                formatter: function(value) {{
+                                    if (value >= 1000000) return '$' + (value/1000000).toFixed(1) + 'M';
+                                    if (value >= 1000) return '$' + (value/1000).toFixed(0) + 'K';
+                                    return '$' + value.toLocaleString();
+                                }}
+                            }},
                             tooltip: {{
                                 backgroundColor: 'rgba(15, 23, 42, 0.95)',
                                 padding: 12,
-                                cornerRadius: 6,
+                                cornerRadius: 8,
                                 callbacks: {{
-                                    label: function(context) {{
-                                        return '$' + (context.parsed.y/1000000).toFixed(1) + 'M';
-                                    }}
+                                    label: function(context) {{ return 'Value: $' + context.parsed.y.toLocaleString(); }}
                                 }}
                             }}
                         }},
                         scales: {{
-                            y: {{ display: false, beginAtZero: true }},
-                            x: {{ display: false }}
+                            y: {{ beginAtZero: true, grace: '15%', ticks: {{ font: {{ size: 10 }}, color: '#64748b' }}, grid: {{ color: 'rgba(0,0,0,0.05)' }}, border: {{ display: false }} }},
+                            x: {{ ticks: {{ font: {{ size: 10 }}, color: '#64748b' }}, grid: {{ display: false }}, border: {{ display: false }} }}
                         }}
                     }}
                 }});
 
+                // Mini Chart
+                const miniCtx = document.getElementById('miniChart').getContext('2d');
+                new Chart(miniCtx, {{
+                    type: 'line',
+                    data: {{
+                        labels: chartData.labels,
+                        datasets: [{{
+                            data: chartData.values,
+                            borderColor: '#60a5fa',
+                            backgroundColor: 'rgba(96, 165, 250, 0.2)',
+                            borderWidth: 3,
+                            pointRadius: 0,
+                            tension: 0.4,
+                            fill: true
+                        }}]
+                    }},
+                    options: {{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {{ legend: {{ display: false }}, datalabels: {{ display: false }} }},
+                        scales: {{ y: {{ display: false, beginAtZero: true }}, x: {{ display: false }} }}
+                    }}
+                }});
 
-                // Bar Chart on right side bottom
+                // Area Chart (Bar)
                 const areaCtx = document.getElementById('areaChart').getContext('2d');
                 new Chart(areaCtx, {{
                     type: 'bar',
@@ -1196,541 +893,228 @@ def generate_statistic_html_with_real_chart(data):
                         labels: chartData.labels,
                         datasets: [{{
                             data: chartData.values,
-                            backgroundColor: function(context) {{
-                                const chart = context.chart;
-                                const {{ctx, chartArea}} = chart;
-                                if (!chartArea) return '#2563eb';
-                                const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-                                gradient.addColorStop(0, '#3b82f6');
-                                gradient.addColorStop(1, '#2563eb');
-                                return gradient;
-                            }},
-                            borderColor: '#1e40af',
-                            borderWidth: 0,
-                            borderRadius: 6,
-                            hoverBackgroundColor: '#1e40af'
+                            backgroundColor: '#3b82f6',
+                            borderRadius: 6
                         }}]
                     }},
                     options: {{
                         responsive: true,
                         maintainAspectRatio: false,
-                        plugins: {{ 
-                            legend: {{ display: false }},
-                            datalabels: {{ display: false }},
-                            tooltip: {{
-                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                                padding: 14,
-                                cornerRadius: 8,
-                                callbacks: {{
-                                    label: function(context) {{
-                                        return '$' + (context.parsed.y/1000000).toFixed(1) + 'M';
-                                    }}
-                                }}
-                            }}
-                        }},
+                        plugins: {{ legend: {{ display: false }}, datalabels: {{ display: false }} }},
                         scales: {{
-                            y: {{ 
-                                display: true,
-                                beginAtZero: true,
-                                ticks: {{ 
-                                    font: {{ size: 10, weight: '600' }},
-                                    color: '#64748b',
-                                    callback: function(value) {{ return '$' + (value/1000000).toFixed(1) + 'M'; }}
-                                }},
-                                grid: {{ 
-                                    color: 'rgba(0, 0, 0, 0.04)',
-                                    lineWidth: 1
-                                }},
-                                border: {{ display: false }}
-                            }},
-                            x: {{ 
-                                ticks: {{ 
-                                    font: {{ size: 11, weight: '600' }},
-                                    color: '#64748b'
-                                }},
-                                grid: {{ display: false }},
-                                border: {{ display: false }}
-                            }}
+                            y: {{ display: true, beginAtZero: true, ticks: {{ font: {{ size: 8 }}, color: '#64748b' }}, grid: {{ display: false }}, border: {{ display: false }} }},
+                            x: {{ ticks: {{ font: {{ size: 8 }}, color: '#64748b' }}, grid: {{ display: false }}, border: {{ display: false }} }}
                         }}
                     }}
                 }});
             }}, 500);
         }});
     </script>
-</body></html>"""
+</body>
+</html>"""
 
 
 def generate_dashboard_html_with_real_data(all_metrics_data):
     """Generate comprehensive dashboard slide with real data from all metrics."""
-    print(f"🏢 Generating Business Health Dashboard with {len(all_metrics_data)} metrics")
-    
-    # Debug: Print all received metrics
-    print(f"   📋 Received metrics:")
-    for i, metric in enumerate(all_metrics_data):
-        print(f"      {i+1}. {metric.get('title', 'Unknown')} - {len(metric.get('chart_data', []))} data points")
-        if metric.get('chart_data'):
-            for point in metric.get('chart_data', []):
-                print(f"         • {point.get('name', 'N/A')}: ${point.get('series1', 0):,.0f}")
-    
-    # Extract financial metrics (Income, Gross Profit, EBITDA, Net Income, Expenses)
-    financial_metrics = []
-    financial_period1 = []
-    financial_period2 = []
-    financial_changes = []
-    
-    # Extract operational metrics (Collection Days, Payment Days, Inventory Days)
-    operational_metrics = []
-    operational_current = []
-    operational_previous = []
-    operational_changes = []
-    
-    period1_label = "Previous"
-    period2_label = "Current"
+    # Financial/Operational metric categorization logic...
+    financial_metrics, financial_period1, financial_period2, financial_changes = [], [], [], []
+    operational_metrics, operational_current, operational_previous, operational_changes = [], [], [], []
+    period1_label, period2_label = "Previous", "Current"
     
     for metric_data in all_metrics_data:
         metric_name = metric_data.get('title', 'Unknown')
         chart_data = metric_data.get('chart_data', [])
-        
         if len(chart_data) >= 2:
-            # Sort chronologically and find the main comparison periods (Feb 2021 vs Jan 2021)
             sorted_data = sorted(chart_data, key=lambda x: x.get('name', ''))
-            
-            # Look for Feb 2021 and Jan 2021 specifically (the main comparison in your prompt)
             feb_2021 = next((d for d in sorted_data if 'Feb 2021' in d.get('name', '')), None)
             jan_2021 = next((d for d in sorted_data if 'Jan 2021' in d.get('name', '')), None)
-            
             if feb_2021 and jan_2021:
-                # Use the specific Feb vs Jan comparison from your prompt
-                period1_val = jan_2021.get('series1', 0)  # Jan 2021 (previous)
-                period2_val = feb_2021.get('series1', 0)  # Feb 2021 (current)
-                period1_label = jan_2021.get('name', 'Jan 2021')
-                period2_label = feb_2021.get('name', 'Feb 2021')
+                period1_val, period2_val = jan_2021.get('series1', 0), feb_2021.get('series1', 0)
+                period1_label, period2_label = jan_2021.get('name', 'Jan 2021'), feb_2021.get('name', 'Feb 2021')
             else:
-                # Fallback to most recent two periods
-                period1_val = sorted_data[-2].get('series1', 0)  # Second to last (previous)
-                period2_val = sorted_data[-1].get('series1', 0)  # Last (current)
-                period1_label = sorted_data[-2].get('name', 'Previous')
-                period2_label = sorted_data[-1].get('name', 'Current')
+                period1_val, period2_val = sorted_data[-2].get('series1', 0), sorted_data[-1].get('series1', 0)
+                period1_label, period2_label = sorted_data[-2].get('name', 'Previous'), sorted_data[-1].get('name', 'Current')
             
-            print(f"   📊 {metric_name}: {period1_label} ${period1_val:,.0f} → {period2_label} ${period2_val:,.0f}")
-            
-            # Calculate percentage change
-            if period1_val > 0:
-                change_pct = ((period2_val - period1_val) / period1_val) * 100
-                print(f"      Change: {change_pct:+.1f}%")
-            else:
-                change_pct = 0
-            
-            # Categorize metrics - EXCLUDE main financial KPIs from dashboard
-            excluded_main_kpis =  ['income', 'gross profit', 'net income', 'cash flow']
-            
-            if metric_name.lower() in excluded_main_kpis:
-                print(f"      🚫 Excluded main KPI from dashboard: {metric_name}")
-                continue  # Skip these main KPIs for dashboard
+            change_pct = ((period2_val - period1_val) / period1_val * 100) if period1_val > 0 else 0
+            if metric_name.lower() in ['income', 'gross profit', 'net income', 'cash flow']:
+                continue
             elif any(keyword in metric_name.lower() for keyword in ['ebitda', 'expense', 'cost']):
-                financial_metrics.append(metric_name)
-                financial_period1.append(period1_val)
-                financial_period2.append(period2_val)
-                financial_changes.append(change_pct)
-                print(f"      ✅ Added to financial: {metric_name}")
+                financial_metrics.append(metric_name); financial_period1.append(period1_val); financial_period2.append(period2_val); financial_changes.append(change_pct)
             elif any(keyword in metric_name.lower() for keyword in ['collection', 'payment', 'inventory', 'days', 'customer collection', 'supplier payment', 'invoice', 'acquisition', 'employee']):
-                operational_metrics.append(metric_name)
-                operational_previous.append(period1_val)
-                operational_current.append(period2_val)
-                operational_changes.append(change_pct)
-                print(f"      ✅ Added to operational: {metric_name}")
-            else:
-                print(f"      ⚠️  Uncategorized metric: {metric_name}")
+                operational_metrics.append(metric_name); operational_previous.append(period1_val); operational_current.append(period2_val); operational_changes.append(change_pct)
     
-    # Build financial metric cards HTML
     financial_cards_html = ""
     for i, (metric, change) in enumerate(zip(financial_metrics[:5], financial_changes[:5])):
         sign = "+" if change >= 0 else ""
-        color = "blue" if i == 0 else ["cyan", "blue", "indigo", "orange"][i % 4]
+        color_hex = ["#2563eb", "#0891b2", "#2563eb", "#4f46e5", "#ea580c"][i % 5]
         financial_cards_html += f'''
-        <div class="metric-card glass-card rounded-xl p-3 shadow-md text-center border-l-4 border-{color}-600">
-          <div class="text-2xl font-black text-{color}-600">{sign}{change:.1f}%</div>
-          <div class="text-xs font-semibold text-gray-600 mt-1">{metric.replace(' ', '<br>')}</div>
+        <div style="background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(0, 0, 0, 0.05); border-left: 4px solid {color_hex}; border-radius: 12px; padding: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); text-align: center;">
+          <div style="font-size: 24px; font-weight: 900; color: {color_hex};">{sign}{change:.1f}%</div>
+          <div style="font-size: 10px; font-weight: 600; color: #4b5563; margin-top: 4px;">{metric.replace(' ', '<br>')}</div>
         </div>'''
     
-    # Build operational metric cards HTML
     operational_cards_html = ""
     if operational_metrics:
         for i, (metric, prev, curr, change) in enumerate(zip(operational_metrics[:3], operational_previous[:3], operational_current[:3], operational_changes[:3])):
             change_val = curr - prev
-            sign = "+" if change_val >= 0 else ""
-            color = "red" if change_val > 0 else "green"
+            stat_color = "#ef4444" if change_val > 0 else "#22c55e" # red if increasing (bad for some, good for others, but generally...)
+            bg_color = "#fee2e2" if change_val > 0 else "#dcfce7"
+            accent_color = ["#2563eb", "#0891b2", "#2563eb"][i % 3]
             arrow_path = "M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" if change_val > 0 else "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-            
             operational_cards_html += f'''
-            <div class="glass-card rounded-xl p-3 shadow-md border-l-4 border-{["blue", "cyan", "blue"][i]}-600 hover:shadow-lg transition-all duration-300">
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="text-xs font-semibold text-gray-500 mb-0.5">{metric}</div>
-                  <div class="flex items-baseline space-x-2">
-                    <span class="text-2xl font-black text-{["blue", "cyan", "blue"][i]}-600">{curr:.1f}</span>
-                    <span class="text-sm font-bold text-gray-400">← {prev:.1f}</span>
-                    <span class="text-xs px-2 py-0.5 bg-{color}-100 text-{color}-700 rounded-full font-bold">{sign}{change_val:.1f}</span>
-                  </div>
+            <div style="background: white; border-radius: 12px; padding: 12px; margin-bottom: 8px; border: 1px solid rgba(0,0,0,0.05); border-left: 4px solid {accent_color}; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between;">
+              <div>
+                <div style="font-size: 11px; font-weight: 600; color: #6b7280; margin-bottom: 2px;">{metric}</div>
+                <div style="display: flex; align-items: baseline; gap: 8px;">
+                  <span style="font-size: 24px; font-weight: 900; color: {accent_color};">{curr:.1f}</span>
+                  <span style="font-size: 13px; font-weight: 700; color: #9ca3af;">← {prev:.1f}</span>
+                  <span style="font-size: 11px; font-weight: 800; padding: 2px 8px; background: {bg_color}; color: {stat_color}; border-radius: 9999px;">{"+" if change_val >= 0 else ""}{change_val:.1f}</span>
                 </div>
-                <svg class="w-8 h-8 text-{color}-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="{arrow_path}"/>
-                </svg>
               </div>
+              <svg style="width: 32px; height: 32px; color: {stat_color};" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="{arrow_path}"/>
+              </svg>
             </div>'''
     else:
-        # Show placeholder if no operational metrics
-        operational_cards_html = '''
-        <div class="glass-card rounded-xl p-4 shadow-md text-center">
-          <div class="text-sm text-gray-500">No operational metrics available</div>
-        </div>'''
-    
-    # Prepare chart data as JSON
-    financial_data_json = {
-        'metrics': financial_metrics[:5],
-        'period1': financial_period1[:5],
-        'period2': financial_period2[:5]
-    }
-    
-    operational_data_json = {
-        'metrics': operational_metrics[:3],
-        'period1': operational_previous[:3],
-        'period2': operational_current[:3]
-    }
-    
-    print(f"   📊 Financial metrics: {len(financial_metrics)} found")
-    print(f"   🔧 Operational metrics: {len(operational_metrics)} found")
-    print(f"   📅 Period comparison: {period1_label} vs {period2_label}")
+        operational_cards_html = '<div style="background: white; border-radius: 12px; padding: 16px; text-align: center; color: #9ca3af; font-size: 14px;">No operational metrics available</div>'
+
+    financial_data_json = json.dumps({'metrics': financial_metrics[:5], 'period1': financial_period1[:5], 'period2': financial_period2[:5]})
+    operational_data_json = json.dumps({'metrics': operational_metrics[:3], 'period1': operational_previous[:3], 'period2': operational_current[:3]})
 
     return f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        * {{ font-family: 'Inter', sans-serif; }}
-        body {{ margin:0; width:1280px; height:720px; overflow:hidden; background:#000 }}
-        .gradient-header {{ 
-            background:linear-gradient(135deg,#0a1628 0%,#1e3a8a 50%,#1e40af 100%);
-            position:relative;
-            overflow:hidden;
-        }}
-        .gradient-header::before {{
-            content:'';
-            position:absolute;
-            top:-50%;
-            right:-50%;
-            width:100%;
-            height:100%;
-            background:radial-gradient(circle,rgba(96,165,250,0.15) 0%,transparent 70%);
-            animation:float 8s ease-in-out infinite;
-        }}
-        .gradient-header::after {{
-            content:'';
-            position:absolute;
-            bottom:-30%;
-            left:-30%;
-            width:80%;
-            height:80%;
-            background:radial-gradient(circle,rgba(147,197,253,0.1) 0%,transparent 60%);
-            animation:float 6s ease-in-out infinite reverse;
-        }}
-        @keyframes float {{
-            0%, 100% {{ transform:translate(0,0) scale(1); }}
-            50% {{ transform:translate(-20px,20px) scale(1.1); }}
-        }}
-        @keyframes pulse-glow {{
-            0%, 100% {{ opacity:1; box-shadow:0 0 20px rgba(96,165,250,0.6); }}
-            50% {{ opacity:0.7; box-shadow:0 0 30px rgba(96,165,250,0.9); }}
-        }}
-        @keyframes slideIn {{
-            from {{ opacity:0; transform:translateY(20px); }}
-            to {{ opacity:1; transform:translateY(0); }}
-        }}
-        .animate-slide-in {{ animation:slideIn 0.6s ease-out forwards; }}
-        .delay-1 {{ animation-delay:0.1s; opacity:0; }}
-        .delay-2 {{ animation-delay:0.2s; opacity:0; }}
-        .delay-3 {{ animation-delay:0.3s; opacity:0; }}
-        .delay-4 {{ animation-delay:0.4s; opacity:0; }}
-        .glass-card {{
-            background:rgba(255,255,255,0.95);
-            backdrop-filter:blur(10px);
-            border:1px solid rgba(255,255,255,0.3);
-            box-shadow:0 8px 32px rgba(0,0,0,0.08);
-        }}
-        .stat-card {{
-            background:linear-gradient(135deg,rgba(255,255,255,0.1) 0%,rgba(255,255,255,0.05) 100%);
-            backdrop-filter:blur(10px);
-            border:1px solid rgba(255,255,255,0.2);
-            transition:all 0.3s ease;
-        }}
-        .stat-card:hover {{
-            background:linear-gradient(135deg,rgba(255,255,255,0.15) 0%,rgba(255,255,255,0.08) 100%);
-            transform:translateY(-2px);
-            box-shadow:0 8px 24px rgba(0,0,0,0.2);
-        }}
-        canvas {{ image-rendering:-webkit-optimize-contrast; image-rendering:crisp-edges }}
-        .metric-card {{
-            transition:all 0.3s ease;
-        }}
-        .metric-card:hover {{
-            transform:translateY(-2px);
-            box-shadow:0 8px 24px rgba(0,0,0,0.1);
-        }}
+        @keyframes float {{ 0%, 100% {{ transform:translate(0,0) scale(1); }} 50% {{ transform:translate(-20px,20px) scale(1.1); }} }}
+        @keyframes slideIn {{ from {{ opacity:0; transform:translateY(20px); }} to {{ opacity:1; transform:translateY(0); }} }}
     </style>
 </head>
-<body>
-<div class="w-[1280px] h-[720px] bg-white relative">
-  <div class="h-24 gradient-header px-12 py-6 flex justify-between items-center shadow-2xl relative z-10">
+<body style="margin: 0; width: 1280px; height: 720px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #000;">
+<div style="width: 1280px; height: 720px; background: white; position: relative;">
+  <div style="height: 96px; background: linear-gradient(135deg, #0a1628 0%, #1e3a8a 50%, #1e40af 100%); padding: 0 48px; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 10; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);">
+    <div style="position: absolute; top: -50%; right: -50%; width: 100%; height: 100%; background: radial-gradient(circle, rgba(96, 165, 250, 0.15) 0%, transparent 70%); animation: float 8s ease-in-out infinite;"></div>
     <div>
-      <div class="inline-block px-4 py-1.5 bg-blue-400 bg-opacity-20 rounded-full mb-2 border border-blue-300 border-opacity-30">
-        <span class="text-blue-100 font-bold text-xs tracking-widest">COMPARATIVE ANALYSIS</span>
+      <div style="display: inline-block; padding: 4px 12px; background: rgba(96, 165, 250, 0.2); border-radius: 9999px; margin-bottom: 4px; border: 1px solid rgba(147, 197, 253, 0.3);">
+        <span style="color: #dbeafe; font-weight: 700; font-size: 10px; tracking: 0.1em; text-transform: uppercase;">COMPARATIVE ANALYSIS</span>
       </div>
-      <h1 class="text-3xl font-black text-white">Business Health Dashboard</h1>
+      <h1 style="font-size: 28px; font-weight: 900; color: white; margin: 0;">Business Health Dashboard</h1>
     </div>
-    <div class="flex items-center space-x-3">
-      <div class="w-11 h-11 bg-white bg-opacity-20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="width: 44px; height: 44px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(4px); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+        <svg style="width: 24px; height: 24px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
         </svg>
       </div>
-      <span class="text-lg font-bold text-white">Financial Analysis</span>
+      <span style="font-size: 18px; font-weight: 700; color: white;">Financial Analysis</span>
     </div>
-    <div class="absolute top-6 right-20 w-4 h-4 bg-cyan-400 rounded-full" style="animation:pulse-glow 2s ease-in-out infinite"></div>
-    <div class="absolute bottom-6 left-32 w-3 h-3 bg-blue-400 rounded-full opacity-60"></div>
   </div>
 
-  <div class="flex h-[calc(100%-96px)]">
-    <!-- LEFT SIDE: FINANCIAL PERFORMANCE -->
-    <div class="w-[55%] p-8 bg-gradient-to-br from-gray-50 to-blue-50 animate-slide-in">
-      <div class="flex items-center justify-between mb-5">
+  <div style="display: flex; height: calc(100% - 96px);">
+    <!-- LEFT SIDE -->
+    <div style="width: 55%; padding: 32px; background: linear-gradient(to bottom right, #f9fafb, #eff6ff); animation: slideIn 0.6s ease-out forwards;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
         <div>
-          <div class="inline-block px-3 py-1.5 glass-card rounded-lg mb-2 shadow-md">
-            <span class="text-xs font-bold tracking-wide text-blue-600">FINANCIAL METRICS</span>
+          <div style="display: inline-block; padding: 4px 12px; background: white; border-radius: 8px; margin-bottom: 4px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid rgba(0,0,0,0.05);">
+            <span style="font-size: 11px; font-weight: 800; color: #2563eb; text-transform: uppercase; letter-spacing: 0.05em;">FINANCIAL METRICS</span>
           </div>
-          <h3 class="text-xl font-black text-gray-800">Performance Summary</h3>
+          <h3 style="font-size: 20px; font-weight: 900; color: #1f2937; margin: 0;">Performance Summary</h3>
         </div>
-        <div class="flex space-x-2">
-          <div class="flex items-center space-x-2 px-4 py-2 glass-card rounded-xl shadow-md">
-            <div class="w-3 h-3 rounded-full bg-gradient-to-r from-blue-500 to-blue-600"></div>
-            <span class="text-xs font-bold text-gray-700">{period1_label}</span>
+        <div style="display: flex; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px; background: white; padding: 6px 12px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+            <div style="width: 10px; height: 10px; border-radius: 50%; background: #2563eb;"></div>
+            <span style="font-size: 11px; font-weight: 700; color: #4b5563;">{period1_label}</span>
           </div>
-          <div class="flex items-center space-x-2 px-4 py-2 glass-card rounded-xl shadow-md">
-            <div class="w-3 h-3 rounded-full bg-gradient-to-r from-cyan-400 to-cyan-500"></div>
-            <span class="text-xs font-bold text-gray-700">{period2_label}</span>
+          <div style="display: flex; align-items: center; gap: 8px; background: white; padding: 6px 12px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+            <div style="width: 10px; height: 10px; border-radius: 50%; background: #06b6d4;"></div>
+            <span style="font-size: 11px; font-weight: 700; color: #4b5563;">{period2_label}</span>
           </div>
         </div>
       </div>
-      <div class="h-[340px] glass-card rounded-2xl shadow-lg p-5 mb-4 animate-slide-in delay-1">
+      <div style="height: 340px; background: rgba(255,255,255,0.7); backdrop-filter: blur(10px); border-radius: 20px; padding: 20px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.3); animation: slideIn 0.6s ease-out 0.1s forwards; opacity: 0;">
         <canvas id="barChart"></canvas>
       </div>
-      <div class="grid grid-cols-5 gap-2 animate-slide-in delay-2">
+      <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; animation: slideIn 0.6s ease-out 0.2s forwards; opacity: 0;">
         {financial_cards_html}
       </div>
     </div>
 
-    <!-- RIGHT SIDE: OPERATIONAL EFFICIENCY -->
-    <div class="w-[45%] p-6 bg-white animate-slide-in delay-1">
-      <div class="mb-4">
-        <div class="inline-block px-3 py-1.5 rounded-lg mb-2 shadow-md bg-gradient-to-r from-cyan-500 to-blue-600">
-          <span class="text-xs font-bold tracking-wide text-white">OPERATIONAL EFFICIENCY</span>
+    <!-- RIGHT SIDE -->
+    <div style="width: 45%; padding: 24px; background: white; animation: slideIn 0.6s ease-out 0.2s forwards; opacity: 0;">
+      <div style="margin-bottom: 16px;">
+        <div style="display: inline-block; padding: 4px 12px; background: linear-gradient(to right, #06b6d4, #2563eb); border-radius: 8px; margin-bottom: 4px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+          <span style="font-size: 11px; font-weight: 800; color: white; text-transform: uppercase;">OPERATIONAL EFFICIENCY</span>
         </div>
-        <h3 class="text-xl font-black text-gray-800">Working Capital</h3>
+        <h3 style="font-size: 20px; font-weight: 900; color: #1f2937; margin: 0;">Working Capital</h3>
       </div>
 
-      <div class="h-[170px] glass-card rounded-2xl shadow-lg p-4 mb-3 animate-slide-in delay-2">
+      <div style="height: 180px; background: rgba(255,255,255,0.7); backdrop-filter: blur(10px); border-radius: 20px; padding: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid rgba(0,0,0,0.05); animation: slideIn 0.6s ease-out 0.3s forwards; opacity: 0;">
         <canvas id="lineChart"></canvas>
       </div>
 
-      <div class="space-y-2.5 animate-slide-in delay-3">
+      <div style="display: flex; flex-direction: column; gap: 8px; animation: slideIn 0.6s ease-out 0.4s forwards; opacity: 0;">
         {operational_cards_html}
       </div>
     </div>
   </div>
-  <div class="absolute bottom-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-cyan-400 to-blue-600"></div>
+  <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 6px; background: linear-gradient(to right, #2563eb, #06b6d4, #2563eb);"></div>
 </div>
 
 <script>
-// Wait for Chart.js to load
 window.addEventListener('load', function() {{
   setTimeout(function() {{
-// Set Chart.js defaults for high quality
-Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-Chart.defaults.plugins.legend.labels.usePointStyle = true;
-
-// Financial metrics data
-const financial_data = {json.dumps(financial_data_json)};
-
-// Bar Chart - Financial Performance
-const barCtx = document.getElementById('barChart').getContext('2d');
-new Chart(barCtx, {{
-  type: 'bar',
-  data: {{
-    labels: financial_data['metrics'],
-    datasets: [
-      {{
-        label: '{period1_label}',
-        data: financial_data['period1'],
-        backgroundColor: function(context) {{
-          const chart = context.chart;
-          const {{ctx, chartArea}} = chart;
-          if (!chartArea) return '#2563eb';
-          const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-          gradient.addColorStop(0, '#3b82f6');
-          gradient.addColorStop(1, '#2563eb');
-          return gradient;
-        }},
-        borderColor: '#1e40af',
-        borderWidth: 0,
-        borderRadius: 8,
-        barThickness: 32
+    Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+    
+    const financial_data = {financial_data_json};
+    const barCtx = document.getElementById('barChart').getContext('2d');
+    new Chart(barCtx, {{
+      type: 'bar',
+      data: {{
+        labels: financial_data['metrics'],
+        datasets: [
+          {{ label: '{period1_label}', data: financial_data['period1'], backgroundColor: '#2563eb', borderRadius: 6, barThickness: 24 }},
+          {{ label: '{period2_label}', data: financial_data['period2'], backgroundColor: '#06b6d4', borderRadius: 6, barThickness: 24 }}
+        ]
       }},
-      {{
-        label: '{period2_label}',
-        data: financial_data['period2'],
-        backgroundColor: function(context) {{
-          const chart = context.chart;
-          const {{ctx, chartArea}} = chart;
-          if (!chartArea) return '#06b6d4';
-          const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-          gradient.addColorStop(0, '#22d3ee');
-          gradient.addColorStop(1, '#06b6d4');
-          return gradient;
-        }},
-        borderColor: '#0891b2',
-        borderWidth: 0,
-        borderRadius: 8,
-        barThickness: 32
-      }}
-    ]
-  }},
-  options: {{
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {{
-      legend: {{
-        display: false
-      }},
-      tooltip: {{
-        backgroundColor: 'rgba(15, 23, 42, 0.95)',
-        padding: 14,
-        titleFont: {{ size: 14, weight: 'bold' }},
-        bodyFont: {{ size: 13 }},
-        cornerRadius: 8,
-        displayColors: true,
-        usePointStyle: true,
-        callbacks: {{
-          label: function(context) {{
-            return context.dataset.label + ': $' + context.parsed.y.toLocaleString();
-          }}
+      options: {{
+        responsive: true, maintainAspectRatio: false,
+        plugins: {{ legend: {{ display: false }}, tooltip: {{ padding: 12, cornerRadius: 8 }} }},
+        scales: {{
+          y: {{ beginAtZero: true, grid: {{ color: 'rgba(0,0,0,0.05)' }}, ticks: {{ font: {{ size: 10 }}, color: '#64748b', callback: v => '$' + (v/1000) + 'K' }}, border: {{ display: false }} }},
+          x: {{ grid: {{ display: false }}, ticks: {{ font: {{ size: 10, weight: '700' }}, color: '#64748b' }}, border: {{ display: false }} }}
         }}
       }}
-    }},
-    scales: {{
-      y: {{
-        beginAtZero: true,
-        grid: {{
-          color: 'rgba(0, 0, 0, 0.04)',
-          lineWidth: 1
-        }},
-        ticks: {{
-          callback: function(value) {{ return '$' + (value/1000) + 'K'; }},
-          font: {{ size: 12, weight: '600' }},
-          color: '#64748b'
-        }},
-        border: {{ display: false }}
-      }},
-      x: {{
-        grid: {{ display: false }},
-        ticks: {{ 
-          font: {{ size: 12, weight: '600' }},
-          color: '#64748b'
-        }},
-        border: {{ display: false }}
-      }}
-    }}
-  }}
-}});
+    }});
 
-// Line Chart - Operational Efficiency Trends
-const operational_data = {json.dumps(operational_data_json)};
-const lineCtx = document.getElementById('lineChart').getContext('2d');
-new Chart(lineCtx, {{
-  type: 'line',
-  data: {{
-    labels: ['{period1_label}', '{period2_label}'],
-    datasets: operational_data['metrics'].map((metric, index) => ({{
-      label: metric,
-      data: [operational_data['period1'][index], operational_data['period2'][index]],
-      borderColor: ['#2563eb', '#06b6d4', '#8b5cf6'][index % 3],
-      backgroundColor: ['rgba(37, 99, 235, 0.1)', 'rgba(6, 182, 212, 0.1)', 'rgba(139, 92, 246, 0.1)'][index % 3],
-      borderWidth: 3,
-      pointRadius: 6,
-      pointBackgroundColor: ['#2563eb', '#06b6d4', '#8b5cf6'][index % 3],
-      pointBorderColor: '#fff',
-      pointBorderWidth: 3,
-      pointHoverRadius: 8,
-      tension: 0.4,
-      fill: true
-    }}))
-  }},
-  options: {{
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {{
-      legend: {{
-        display: true,
-        position: 'bottom',
-        labels: {{ 
-          font: {{ size: 11, weight: 'bold' }},
-          padding: 12,
-          usePointStyle: true,
-          pointStyle: 'circle'
-        }}
+    const operational_data = {operational_data_json};
+    const lineCtx = document.getElementById('lineChart').getContext('2d');
+    new Chart(lineCtx, {{
+      type: 'line',
+      data: {{
+        labels: ['{period1_label}', '{period2_label}'],
+        datasets: operational_data['metrics'].map((metric, i) => ({{
+          label: metric,
+          data: [operational_data['period1'][i], operational_data['period2'][i]],
+          borderColor: ['#2563eb', '#06b6d4', '#8b5cf6'][i % 3],
+          backgroundColor: 'transparent',
+          borderWidth: 3,
+          pointRadius: 5,
+          tension: 0.4
+        }}))
       }},
-      tooltip: {{
-        backgroundColor: 'rgba(15, 23, 42, 0.95)',
-        padding: 14,
-        titleFont: {{ size: 13, weight: 'bold' }},
-        bodyFont: {{ size: 12 }},
-        cornerRadius: 8,
-        displayColors: true,
-        usePointStyle: true,
-        callbacks: {{
-          label: function(context) {{
-            return context.dataset.label + ': ' + context.parsed.y + ' days';
-          }}
+      options: {{
+        responsive: true, maintainAspectRatio: false,
+        plugins: {{
+          legend: {{ position: 'bottom', labels: {{ boxWidth: 8, font: {{ size: 9, weight: '700' }} }} }},
+          tooltip: {{ padding: 10, cornerRadius: 6 }}
+        }},
+        scales: {{
+          y: {{ beginAtZero: true, grid: {{ color: 'rgba(0,0,0,0.05)' }}, ticks: {{ font: {{ size: 9 }}, color: '#64748b', callback: v => v + 'd' }}, border: {{ display: false }} }},
+          x: {{ grid: {{ display: false }}, ticks: {{ font: {{ size: 9, weight: '700' }}, color: '#64748b' }}, border: {{ display: false }} }}
         }}
       }}
-    }},
-    scales: {{
-      y: {{
-        beginAtZero: true,
-        grid: {{
-          color: 'rgba(0, 0, 0, 0.04)',
-          lineWidth: 1
-        }},
-        ticks: {{
-          callback: function(value) {{ return value + ' days'; }},
-          font: {{ size: 11, weight: '600' }},
-          color: '#64748b'
-        }},
-        border: {{ display: false }}
-      }},
-      x: {{
-        grid: {{ display: false }},
-        ticks: {{ 
-          font: {{ size: 11, weight: '600' }},
-          color: '#64748b'
-        }},
-        border: {{ display: false }}
-      }}
-    }}
-  }}
-}});
-
+    }});
   }}, 500);
 }});
 </script>
@@ -1740,241 +1124,154 @@ new Chart(lineCtx, {{
 def generate_comparison_html_with_real_charts(data):
     """Generate comparison slide with REAL bar charts from TSX data."""
     # Extract comparison data from TSX chart_data
-    # Format: chart_data should have metrics with series1 and series2 for two periods
-    comparison_data = {
-        'metrics': [],
-        'period1': [],
-        'period2': []
-    }
-    
+    comparison_data = {'metrics': [], 'period1': [], 'period2': []}
     if data.get('chart_data') and len(data['chart_data']) > 0:
         for point in data['chart_data']:
             comparison_data['metrics'].append(point.get('name', 'Metric'))
             comparison_data['period1'].append(point.get('series1', 0))
             comparison_data['period2'].append(point.get('series2', 0))
-        print(f"   ✅ Using {len(comparison_data['metrics'])} metrics from TSX for comparison")
     else:
-        # No data - show message
-        comparison_data = {
-            'metrics': ['No Data'],
-            'period1': [0],
-            'period2': [0]
-        }
-        print(f"   ⚠️  NO COMPARISON DATA FOUND")
+        comparison_data = {'metrics': ['No Data'], 'period1': [0], 'period2': [0]}
     
     return f"""<!DOCTYPE html>
-<html><head><meta charset="UTF-8">
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<style>
-body{{margin:0;width:1280px;height:720px;overflow:hidden}}
-.gradient-header{{background:linear-gradient(135deg,#061551 0%,#0e68b3 100%)}}
-canvas{{image-rendering:-webkit-optimize-contrast;image-rendering:crisp-edges}}
-</style>
-</head><body>
-<div class="w-[1280px] h-[720px] bg-white">
-  <div class="h-24 gradient-header px-16 py-4 flex justify-between items-center shadow-lg">
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        @keyframes float {{ 0%, 100% {{ transform:translate(0,0) scale(1); }} 50% {{ transform:translate(-20px,20px) scale(1.1); }} }}
+        @keyframes slideIn {{ from {{ opacity:0; transform:translateY(20px); }} to {{ opacity:1; transform:translateY(0); }} }}
+        body {{ margin: 0; padding: 0; box-sizing: border-box; }}
+    </style>
+</head>
+<body style="margin: 0; width: 1280px; height: 720px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #fff;">
+<div style="width: 1280px; height: 720px; background: white; position: relative;">
+  <div style="height: 96px; background: linear-gradient(135deg, #061551 0%, #0e68b3 100%); padding: 0 64px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); position: relative; overflow: hidden;">
+    <div style="position: absolute; top: -50%; right: -50%; width: 100%; height: 100%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); animation: float 8s ease-in-out infinite;"></div>
     <div>
-      <div class="inline-block px-4 py-1 bg-white bg-opacity-20 rounded-full mb-2">
-        <span class="text-blue-200 font-semibold text-xs tracking-wider">COMPARATIVE ANALYSIS</span>
+      <div style="display: inline-block; padding: 4px 16px; background: rgba(255,255,255,0.2); border-radius: 9999px; margin-bottom: 8px;">
+        <span style="color: #bfdbfe; font-weight: 600; font-size: 12px; tracking: 0.1em; text-transform: uppercase;">COMPARATIVE ANALYSIS</span>
       </div>
-      <h1 class="text-3xl font-black text-white">Period Comparison</h1>
+      <h1 style="font-size: 30px; font-weight: 900; color: white; margin: 0;">Period Comparison</h1>
     </div>
-    <div class="flex items-center space-x-3">
-      <div class="w-10 h-10 bg-white bg-opacity-20 backdrop-blur-sm rounded-xl flex items-center justify-center">
-        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="width: 40px; height: 40px; background: rgba(255,255,255,0.2); backdrop-filter: blur(4px); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+        <svg style="width: 24px; height: 24px; color: white;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
         </svg>
       </div>
-      <span class="text-lg font-bold text-white">Financial Analysis</span>
+      <span style="font-size: 18px; font-weight: 700; color: white;">Financial Analysis</span>
     </div>
   </div>
-  <div class="flex h-[calc(100%-96px)]">
-    <div class="w-1/2 p-8 bg-gray-50">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-bold" style="color:#061551">Monthly Comparison</h3>
-        <div class="flex space-x-3">
-          <div class="flex items-center space-x-2 px-3 py-1 bg-white rounded-full shadow-sm">
-            <div class="w-3 h-3 rounded-full" style="background:#0e68b3"></div>
-            <span class="text-xs font-semibold text-gray-700">Aug 2024</span>
-          </div>
-          <div class="flex items-center space-x-2 px-3 py-1 bg-white rounded-full shadow-sm">
-            <div class="w-3 h-3 rounded-full" style="background:#32bbd8"></div>
-            <span class="text-xs font-semibold text-gray-700">Sep 2024</span>
-          </div>
-        </div>
+
+  <div style="display: flex; height: calc(100% - 96px);">
+    <!-- LEFT SIDE -->
+    <div style="width: 50%; padding: 32px; background: #f8fafc; display: flex; flex-direction: column;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+        <h3 style="font-size: 18px; font-weight: 700; color: #061551; margin: 0;">Monthly Comparison</h3>
       </div>
-      <div class="h-64 bg-white rounded-xl shadow-sm p-4 mb-3">
+      <div style="flex: 1; background: white; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 12px; min-height: 250px;">
         <canvas id="barChart"></canvas>
       </div>
-      <div class="flex gap-3">
-        <div class="flex-1 h-32 bg-white rounded-xl shadow-sm p-3">
+      <div style="display: flex; gap: 12px; height: 128px;">
+        <div style="flex: 1; background: white; border-radius: 12px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
           <canvas id="donutChart"></canvas>
         </div>
-        <div class="flex-1">
-          <h3 class="text-sm font-bold mb-2" style="color:#061551">Key Insights</h3>
-          <p class="text-xs text-gray-600 leading-relaxed">Significant declines across all metrics. Income -44.6%, Gross Profit -45.6%, EBITDA -53.1%.</p>
+        <div style="flex: 1;">
+          <h3 style="font-size: 14px; font-weight: 700; color: #061551; margin-bottom: 8px;">Key Insights</h3>
+          <p style="font-size: 12px; color: #4b5563; line-height: 1.5; margin: 0;">Performance trends indicate evolving business dynamics across the compared periods.</p>
         </div>
       </div>
     </div>
-    <div class="w-1/2 p-8 bg-white">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-bold" style="color:#061551">Historical Trend</h3>
-        <div class="flex items-center space-x-2 px-3 py-1 bg-gray-50 rounded-full">
-          <div class="w-3 h-3 rounded-full" style="background:#0e68b3"></div>
-          <span class="text-xs font-semibold text-gray-700">Income Trend</span>
-        </div>
+
+    <!-- RIGHT SIDE -->
+    <div style="width: 50%; padding: 32px; background: white; display: flex; flex-direction: column;">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+        <h3 style="font-size: 18px; font-weight: 700; color: #061551; margin: 0;">Historical Trend</h3>
       </div>
-      <div class="h-56 bg-gray-50 rounded-xl shadow-sm p-4 mb-3">
+      <div style="flex: 1; background: #f8fafc; border-radius: 12px; padding: 16px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 12px; min-height: 220px;">
         <canvas id="areaChart"></canvas>
       </div>
-      <div class="mt-4">
-        <h3 class="text-base font-bold mb-2" style="color:#061551">Performance Overview</h3>
-        <p class="text-sm text-gray-600 leading-relaxed">Historical financial performance from May 2019 to Sep 2024, showing peak in Dec 2020 at $155,815 followed by sharp decline. Recent months show stabilization at lower levels.</p>
+      <div style="margin-top: 16px;">
+        <h3 style="font-size: 16px; font-weight: 700; color: #061551; margin-bottom: 8px;">Performance Overview</h3>
+        <p style="font-size: 14px; color: #4b5563; line-height: 1.6; margin: 0;">Strategic review of historical data helps identify growth opportunities and risk factors.</p>
       </div>
     </div>
   </div>
-  <div class="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-cyan-400 to-blue-600"></div>
+  <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: linear-gradient(to right, #3b82f6, #22d3ee, #2563eb);"></div>
 </div>
+
 <script>
-// Wait for Chart.js to load
 window.addEventListener('load', function() {{
   setTimeout(function() {{
-// Set Chart.js defaults for high quality
-Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-Chart.defaults.plugins.legend.labels.usePointStyle = true;
-
-// Bar Chart
-const barCtx = document.getElementById('barChart').getContext('2d');
-new Chart(barCtx, {{
-  type: 'bar',
-  data: {{
-    labels: {json.dumps(comparison_data['metrics'])},
-    datasets: [
-      {{
-        label: 'Period 1',
-        data: {json.dumps(comparison_data['period1'])},
-        backgroundColor: 'rgba(14, 104, 179, 0.85)',
-        borderColor: '#0e68b3',
-        borderWidth: 0,
-        borderRadius: 6
+    Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+    
+    // Bar Chart
+    const barCtx = document.getElementById('barChart').getContext('2d');
+    new Chart(barCtx, {{
+      type: 'bar',
+      data: {{
+        labels: {json.dumps(comparison_data['metrics'])},
+        datasets: [
+          {{ label: 'Period 1', data: {json.dumps(comparison_data['period1'])}, backgroundColor: '#0e68b3', borderRadius: 6 }},
+          {{ label: 'Period 2', data: {json.dumps(comparison_data['period2'])}, backgroundColor: '#32bbd8', borderRadius: 6 }}
+        ]
       }},
-      {{
-        label: 'Period 2',
-        data: {json.dumps(comparison_data['period2'])},
-        backgroundColor: 'rgba(50, 187, 216, 0.85)',
-        borderColor: '#32bbd8',
-        borderWidth: 0,
-        borderRadius: 6
-      }}
-    ]
-  }},
-  options: {{
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {{
-      legend: {{
-        display: true,
-        position: 'top',
-        labels: {{ font: {{ size: 12, weight: 'bold' }} }}
-      }},
-      tooltip: {{
-        callbacks: {{
-          label: function(context) {{
-            return context.dataset.label + ': $' + context.parsed.y.toLocaleString();
-          }}
+      options: {{
+        responsive: true, maintainAspectRatio: false,
+        plugins: {{ legend: {{ position: 'top', labels: {{ font: {{ size: 11, weight: '700' }} }} }} }},
+        scales: {{
+          y: {{ beginAtZero: true, ticks: {{ font: {{ size: 9 }}, callback: v => '$' + v.toLocaleString() }} }},
+          x: {{ ticks: {{ font: {{ size: 9 }} }} }}
         }}
       }}
-    }},
-    scales: {{
-      y: {{
-        beginAtZero: true,
-        ticks: {{
-          callback: function(value) {{ return '$' + value.toLocaleString(); }},
-          font: {{ size: 10 }}
-        }}
+    }});
+
+    // Area Chart
+    const areaCtx = document.getElementById('areaChart').getContext('2d');
+    new Chart(areaCtx, {{
+      type: 'line',
+      data: {{
+        labels: {json.dumps(comparison_data['metrics'])},
+        datasets: [{{
+          label: 'Trend',
+          data: {json.dumps(comparison_data['period2'])},
+          borderColor: '#0e68b3',
+          backgroundColor: 'rgba(14, 104, 179, 0.1)',
+          borderWidth: 3,
+          pointRadius: 4,
+          fill: true,
+          tension: 0.4
+        }}]
       }},
-      x: {{
-        ticks: {{ font: {{ size: 10 }} }}
+      options: {{
+        responsive: true, maintainAspectRatio: false,
+        plugins: {{ legend: {{ display: false }} }},
+        scales: {{
+          y: {{ beginAtZero: true, ticks: {{ font: {{ size: 9 }}, callback: v => '$' + v.toLocaleString() }} }},
+          x: {{ ticks: {{ font: {{ size: 9 }} }} }}
+        }}
       }}
-    }}
-  }}
-}});
+    }});
 
-// Area Chart - use same data as bar chart but show trend
-const areaCtx = document.getElementById('areaChart').getContext('2d');
-new Chart(areaCtx, {{
-  type: 'line',
-  data: {{
-    labels: {json.dumps(comparison_data['metrics'])},
-    datasets: [{{
-      label: 'Trend',
-      data: {json.dumps(comparison_data['period2'])},
-      borderColor: '#0e68b3',
-      backgroundColor: 'rgba(14, 104, 179, 0.15)',
-      borderWidth: 3,
-      pointRadius: 5,
-      pointBackgroundColor: '#0e68b3',
-      pointBorderColor: '#fff',
-      pointBorderWidth: 2,
-      fill: true,
-      tension: 0.4
-    }}]
-  }},
-  options: {{
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {{
-      legend: {{ display: false }},
-      tooltip: {{
-        callbacks: {{
-          label: function(context) {{
-            return '$' + context.parsed.y.toLocaleString();
-          }}
-        }}
-      }}
-    }},
-    scales: {{
-      y: {{
-        beginAtZero: true,
-        ticks: {{
-          callback: function(value) {{ return '$' + value.toLocaleString(); }},
-          font: {{ size: 10 }}
-        }}
+    // Donut Chart
+    const donutCtx = document.getElementById('donutChart').getContext('2d');
+    new Chart(donutCtx, {{
+      type: 'doughnut',
+      data: {{
+        labels: ['Income', 'Gross Profit', 'EBITDA', 'Net Income'],
+        datasets: [{{
+          data: [25, 25, 25, 25],
+          backgroundColor: ['#0e68b3', '#32bbd8', '#008afc', '#061551'],
+          borderWidth: 0
+        }}]
       }},
-      x: {{
-        ticks: {{ font: {{ size: 9 }} }}
+      options: {{
+        responsive: true, maintainAspectRatio: false,
+        plugins: {{ legend: {{ position: 'right', labels: {{ font: {{ size: 8 }}, boxWidth: 8 }} }} }}
       }}
-    }}
-  }}
-}});
-
-// Donut Chart
-const donutCtx = document.getElementById('donutChart').getContext('2d');
-new Chart(donutCtx, {{
-  type: 'doughnut',
-  data: {{
-    labels: ['Income', 'Gross Profit', 'EBITDA', 'Net Income'],
-    datasets: [{{
-      data: [5200, 5097, 5097, 5097],
-      backgroundColor: ['#0e68b3', '#32bbd8', '#008afc', '#061551'],
-      borderWidth: 0
-    }}]
-  }},
-  options: {{
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {{
-      legend: {{
-        display: true,
-        position: 'right',
-        labels: {{ font: {{ size: 8 }}, padding: 8 }}
-      }}
-    }}
-  }}
-}});
-
-  }}, 1000);
+    }});
+  }}, 500);
 }});
 </script>
 </body></html>"""
@@ -2085,42 +1382,16 @@ if __name__ == "__main__":
 # ---------------------------------------------------------------------------
 
 def generate_root_cause_html(kpi_name: str, root_causes: list, kpi_description: str = "") -> str:
-    """
-    Generate a 'Why Did This Happen?' slide for a KPI.
-
-    Layout:
-      - Dark-gradient header: KPI name + short description
-      - Card row below: 1-3 chart cards side by side (one per root cause)
-      - Thin gradient footer bar
-
-    Each root cause card contains:
-      - Root cause name (title)
-      - Chart.js bar/pie/doughnut/line chart built from chart_data
-      - 1-2 bullet points
-
-    Args:
-        kpi_name:        e.g. "Income"
-        root_causes:     list of dicts (or RootCauseContent) with keys:
-                           name, description, bullet_points, chart_data
-                         chart_data has keys: labels, values, chart_type
-        kpi_description: short overview text shown in the header
-    """
-    # Normalise to plain dicts so this works with both Pydantic objects and dicts
+    """Generate a 'Why Did This Happen?' slide for a KPI with inline CSS."""
     def _as_dict(obj):
-        if hasattr(obj, "model_dump"):
-            return obj.model_dump()
-        if hasattr(obj, "dict"):
-            return obj.dict()
+        if hasattr(obj, "model_dump"): return obj.model_dump()
+        if hasattr(obj, "dict"): return obj.dict()
         return obj if isinstance(obj, dict) else {}
 
     root_causes = [_as_dict(rc) for rc in root_causes[:3]]
-    num_charts = len(root_causes)
-    if num_charts == 0:
-        return ""
+    if not root_causes: return ""
 
-    accent_colors = ["#3b82f6", "#06b6d4", "#8b5cf6"]  # blue, cyan, purple
-
-    # ---- Build each chart card ----
+    accent_colors = ["#3b82f6", "#06b6d4", "#8b5cf6"]
     chart_cards_html_parts = []
     chart_scripts_parts = []
 
@@ -2129,186 +1400,104 @@ def generate_root_cause_html(kpi_name: str, root_causes: list, kpi_description: 
         rc_description = rc.get("description", "")
         rc_bullets = rc.get("bullet_points", [])
         chart_data_raw = rc.get("chart_data") or {}
-        if hasattr(chart_data_raw, "model_dump"):
-            chart_data_raw = chart_data_raw.model_dump()
+        if hasattr(chart_data_raw, "model_dump"): chart_data_raw = chart_data_raw.model_dump()
 
         labels = chart_data_raw.get("labels", [])
         values = chart_data_raw.get("values", [])
         chart_type = chart_data_raw.get("chart_type", "bar")
         has_data = bool(labels and values)
 
-        # Auto-upgrade bar → line for time-series data (monthly/quarterly/yearly labels)
-        _time_keywords = (
-            'jan', 'feb', 'mar', 'apr', 'may', 'jun',
-            'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
-            'q1', 'q2', 'q3', 'q4',
-            '2019', '2020', '2021', '2022', '2023', '2024', '2025', '2026',
-        )
-        if chart_type == "bar" and has_data and len(labels) >= 4:
-            _sample = " ".join(str(l).lower() for l in labels[:6])
-            if any(kw in _sample for kw in _time_keywords):
-                chart_type = "line"
-
         canvas_id = f"rcChart{i}"
         color = accent_colors[i % len(accent_colors)]
-
-        # Truncate long description
         short_desc = (rc_description[:110] + "…") if len(rc_description) > 110 else rc_description
 
-        # Bullet HTML (show max 2)
         bullets_html = "".join([
-            f'<div class="flex items-start gap-1 text-xs text-gray-600 leading-snug">'
-            f'<span class="text-blue-500 mt-px flex-shrink-0">•</span>'
+            f'<div style="display: flex; align-items: flex-start; gap: 4px; font-size: 11px; color: #4b5563; line-height: 1.4; margin-bottom: 2px;">'
+            f'<span style="color: #3b82f6; font-weight: bold;">•</span>'
             f'<span>{b}</span></div>'
             for b in rc_bullets[:2]
         ])
 
         chart_area = (
-            f'<canvas id="{canvas_id}" class="w-full h-full"></canvas>'
-            if has_data
-            else '<div class="flex items-center justify-center h-full text-gray-400 text-sm italic">No chart data</div>'
+            f'<canvas id="{canvas_id}" style="width: 100%; height: 100%;"></canvas>'
+            if has_data else '<div style="display: flex; align-items: center; justify-content: center; h-full; color: #9ca3af; font-size: 12px; font-style: italic;">No chart data</div>'
         )
 
         chart_cards_html_parts.append(f"""
-        <div class="bg-white rounded-2xl shadow-md flex flex-col overflow-hidden" style="flex:1;min-width:0">
-            <div class="px-4 pt-4 pb-2 border-b border-gray-100">
-                <div class="text-xs font-bold text-gray-800 leading-snug">{rc_name}</div>
+        <div style="background: white; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; border: 1px solid rgba(0,0,0,0.05);">
+            <div style="padding: 16px 16px 8px; border-bottom: 1px solid #f1f5f9;">
+                <div style="font-size: 13px; font-weight: 700; color: #1f2937;">{rc_name}</div>
             </div>
-            <div class="flex-1 relative px-3 pt-2" style="min-height:210px">
+            <div style="flex: 1; position: relative; padding: 12px; min-height: 220px;">
                 {chart_area}
             </div>
-            <div class="px-4 py-3 space-y-1">
-                <p class="text-xs text-gray-500 leading-snug">{short_desc}</p>
-                {bullets_html}
+            <div style="padding: 16px; background: #fcfdfe;">
+                <p style="font-size: 11px; color: #6b7280; margin: 0 0 8px;">{short_desc}</p>
+                <div style="display: flex; flex-direction: column;">{bullets_html}</div>
             </div>
         </div>""")
 
         if has_data:
             labels_json = json.dumps(labels)
             values_json = json.dumps(values)
-
             if chart_type in ("pie", "doughnut"):
-                bg_colors_json = json.dumps([
-                    "#3b82f6", "#06b6d4", "#8b5cf6", "#f59e0b", "#ef4444", "#10b981",
-                ])
+                bg_colors_json = json.dumps(["#3b82f6", "#06b6d4", "#8b5cf6", "#f59e0b", "#ef4444", "#10b981"])
                 chart_scripts_parts.append(f"""
                 new Chart(document.getElementById('{canvas_id}').getContext('2d'), {{
                     type: '{chart_type}',
-                    data: {{
-                        labels: {labels_json},
-                        datasets: [{{
-                            data: {values_json},
-                            backgroundColor: {bg_colors_json},
-                            borderWidth: 2,
-                            borderColor: '#fff'
-                        }}]
-                    }},
-                    options: {{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {{
-                            legend: {{ position: 'right', labels: {{ font: {{ size: 10 }}, boxWidth: 12 }} }},
-                            datalabels: {{ display: false }}
-                        }}
-                    }}
+                    data: {{ labels: {labels_json}, datasets: [{{ data: {values_json}, backgroundColor: {bg_colors_json}, borderWidth: 0 }}] }},
+                    options: {{ responsive: true, maintainAspectRatio: false, plugins: {{ legend: {{ position: 'bottom', labels: {{ boxWidth: 10, font: {{ size: 9 }} }} }} }} }}
                 }});""")
             else:
-                # bar or line
-                dataset_extra = (
-                    f"fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: '{color}',"
-                    if chart_type == "line"
-                    else f"borderRadius: 6, borderSkipped: false,"
-                )
                 chart_scripts_parts.append(f"""
                 new Chart(document.getElementById('{canvas_id}').getContext('2d'), {{
                     type: '{chart_type}',
-                    data: {{
-                        labels: {labels_json},
-                        datasets: [{{
-                            data: {values_json},
-                            backgroundColor: '{color}33',
-                            borderColor: '{color}',
-                            borderWidth: 2,
-                            {dataset_extra}
-                        }}]
-                    }},
+                    data: {{ labels: {labels_json}, datasets: [{{ data: {values_json}, backgroundColor: '{color}33', borderColor: '{color}', borderWidth: 2, tension: 0.4, fill: true }}] }},
                     options: {{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {{
-                            legend: {{ display: false }},
-                            datalabels: {{ display: false }}
-                        }},
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: {{ legend: {{ display: false }} }},
                         scales: {{
-                            y: {{
-                                grid: {{ color: 'rgba(0,0,0,0.05)' }},
-                                ticks: {{ font: {{ size: 10 }}, color: '#64748b' }}
-                            }},
-                            x: {{
-                                grid: {{ display: false }},
-                                ticks: {{ font: {{ size: 10 }}, color: '#64748b', maxRotation: 35 }}
-                            }}
+                            y: {{ beginAtZero: true, grid: {{ color: 'rgba(0,0,0,0.05)' }}, ticks: {{ font: {{ size: 9 }} }} }},
+                            x: {{ grid: {{ display: false }}, ticks: {{ font: {{ size: 9 }} }} }}
                         }}
                     }}
                 }});""")
 
     charts_grid = "\n".join(chart_cards_html_parts)
     all_scripts = "\n".join(chart_scripts_parts)
-
     short_kpi_desc = (kpi_description[:140] + "…") if len(kpi_description) > 140 else kpi_description
 
     return f"""<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
-    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-        * {{ font-family: 'Inter', sans-serif; box-sizing: border-box; }}
-        body {{ margin:0; width:1280px; height:720px; overflow:hidden; background:#f1f5f9; }}
-        canvas {{ image-rendering:-webkit-optimize-contrast; image-rendering:crisp-edges; }}
+        @keyframes slideIn {{ from {{ opacity:0; transform:translateY(20px); }} to {{ opacity:1; transform:translateY(0); }} }}
     </style>
 </head>
-<body>
-<div class="w-[1280px] h-[720px] flex flex-col">
-
-    <!-- Header -->
-    <div style="background:linear-gradient(135deg,#0a1628 0%,#1e3a8a 50%,#1e40af 100%)"
-         class="px-10 py-5 text-white flex items-start justify-between flex-shrink-0">
+<body style="margin: 0; width: 1280px; height: 720px; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f8fafc;">
+<div style="width: 1280px; height: 720px; display: flex; flex-direction: column;">
+    <div style="background: linear-gradient(135deg, #0a1628 0%, #1e3a8a 50%, #1e40af 100%); padding: 24px 40px; color: white; display: flex; justify-content: space-between; align-items: flex-start; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
         <div>
-            <div class="text-xs font-bold text-blue-300 tracking-widest uppercase mb-1">
-                Root Cause Analysis
-            </div>
-            <h1 class="text-2xl font-black text-white leading-tight">
-                {kpi_name} — Why Did This Happen?
-            </h1>
+            <div style="font-size: 11px; font-weight: 800; color: #93c5fd; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px;">Root Cause Analysis</div>
+            <h1 style="font-size: 26px; font-weight: 900; margin: 0;">{kpi_name} — Why Did This Happen?</h1>
         </div>
-        <p class="text-sm text-blue-200 max-w-lg text-right leading-snug mt-1">
-            {short_kpi_desc}
-        </p>
+        <div style="max-width: 500px; text-align: right;">
+            <p style="font-size: 13px; color: #bfdbfe; line-height: 1.5; margin: 0;">{short_kpi_desc}</p>
+        </div>
     </div>
-
-    <!-- Charts row -->
-    <div class="flex-1 p-5 flex gap-5 overflow-hidden">
+    <div style="flex: 1; padding: 24px; display: flex; gap: 24px; animation: slideIn 0.6s ease-out forwards;">
         {charts_grid}
     </div>
-
-    <!-- Footer accent -->
-    <div class="h-1.5 flex-shrink-0"
-         style="background:linear-gradient(90deg,#2563eb,#06b6d4,#2563eb)"></div>
-
+    <div style="height: 6px; background: linear-gradient(to right, #2563eb, #06b6d4, #2563eb);"></div>
 </div>
-
 <script>
-    window.addEventListener('load', function() {{
-        setTimeout(function() {{
-            Chart.register(ChartDataLabels);
-            Chart.defaults.font.family = "'Inter', sans-serif";
-            {all_scripts}
-        }}, 500);
-    }});
+window.addEventListener('load', function() {{
+    setTimeout(function() {{
+        Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+        {all_scripts}
+    }}, 500);
+}});
 </script>
-</body>
-</html>"""
+</body></html>"""
