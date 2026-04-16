@@ -298,6 +298,10 @@ async def generate_presentation(request: FinancialDataRequest):
         temp_dir = tempfile.mkdtemp()
         output_dir = os.path.join(temp_dir, "slides")
         os.makedirs(output_dir, exist_ok=True)
+        
+        # Initialize variables to avoid UnboundLocalError
+        pdf_files = []
+        sorted_files = [] 
         step_start = log_step("1. Setup & Directory Creation", step_start)
 
         # ------------------------------------------------------------------ #
@@ -376,7 +380,6 @@ async def generate_presentation(request: FinancialDataRequest):
                 page = await browser.new_page(
                     viewport={"width": 1280, "height": 720}, device_scale_factor=2
                 )
-                pdf_files = []
                 print(f"🌐 Browser initialised in {time.time() - browser_start:.2f}s")
 
                 for i, slide_info in enumerate(html_slides, 1):
@@ -500,7 +503,6 @@ export default BusinessDashboardSlide;'''
                 page = await browser.new_page(
                     viewport={"width": 1280, "height": 720}, device_scale_factor=2
                 )
-                pdf_files = []
                 print(f"🌐 Browser initialised in {time.time() - browser_start:.2f}s")
 
                 for i, tsx_file in enumerate(sorted_files, 1):
@@ -611,14 +613,14 @@ export default BusinessDashboardSlide;'''
             print(f"⏱️  {step}: {duration:.2f}s ({percentage:.1f}%)")
         print(f"{'='*60}")
         print(f"🏁 TOTAL TIME: {total_time:.2f}s")
-        print(f"📊 Slides generated: {len(sorted_files)}")
+        print(f"📊 Slides generated: {len(pdf_files)}")
         # print(f"💰 Provider: {config.provider}")
         print(f"{'='*60}\n")
         
         return GeneratePDFResponse(
             message=f"PDF generated successfully in {total_time:.2f}s",
             pdf_url=f"/download/{final_pdf.name}",
-            slides_count=len(sorted_files)
+            slides_count=len(pdf_files)
         )
         
     except Exception as e:
