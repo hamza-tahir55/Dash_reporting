@@ -50,6 +50,7 @@ class SlideContent(BaseModel):
     description: str
     bullet_points: List[str] = []
     root_causes: List[RootCauseContent] = []
+    chart_data: Optional[ChartDataPoint] = None  # KPI-level time-series chart data
 
 
 class GenerateSlideContentResponse(BaseModel):

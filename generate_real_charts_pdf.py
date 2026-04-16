@@ -1317,7 +1317,6 @@ def generate_dashboard_html_with_real_data(all_metrics_data):
             change_val = curr - prev
             sign = "+" if change_val >= 0 else ""
             color = "red" if change_val > 0 else "green"
-            arrow_direction = "up" if change_val > 0 else "down"
             arrow_path = "M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" if change_val > 0 else "M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
             
             operational_cards_html += f'''
@@ -2094,6 +2093,18 @@ def generate_root_cause_html(kpi_name: str, root_causes: list, kpi_description: 
         values = chart_data_raw.get("values", [])
         chart_type = chart_data_raw.get("chart_type", "bar")
         has_data = bool(labels and values)
+
+        # Auto-upgrade bar → line for time-series data (monthly/quarterly/yearly labels)
+        _time_keywords = (
+            'jan', 'feb', 'mar', 'apr', 'may', 'jun',
+            'jul', 'aug', 'sep', 'oct', 'nov', 'dec',
+            'q1', 'q2', 'q3', 'q4',
+            '2019', '2020', '2021', '2022', '2023', '2024', '2025', '2026',
+        )
+        if chart_type == "bar" and has_data and len(labels) >= 4:
+            _sample = " ".join(str(l).lower() for l in labels[:6])
+            if any(kw in _sample for kw in _time_keywords):
+                chart_type = "line"
 
         canvas_id = f"rcChart{i}"
         color = accent_colors[i % len(accent_colors)]

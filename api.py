@@ -337,6 +337,17 @@ async def generate_presentation(request: FinancialDataRequest):
             for slide in request.slides:
                 print(f"  📊 Building KPI slide: {slide.kpi_name}")
 
+                # Convert SlideContent.chart_data (ChartDataPoint) to the
+                # [{name, series1}] format expected by generate_statistic_html
+                kpi_chart_data = []
+                if slide.chart_data and slide.chart_data.labels:
+                    kpi_chart_data = [
+                        {'name': label, 'series1': value}
+                        for label, value in zip(
+                            slide.chart_data.labels, slide.chart_data.values
+                        )
+                    ]
+
                 kpi_data = {
                     'type': 'statistic',
                     'title': slide.title,
@@ -344,7 +355,7 @@ async def generate_presentation(request: FinancialDataRequest):
                     'value': '',
                     'label': '',
                     'bullets': slide.bullet_points,
-                    'chart_data': [],
+                    'chart_data': kpi_chart_data,
                     'kpi_prev_percent': '',
                     'kpi_prev_label': '',
                     'kpi_yoy_percent': '',
@@ -352,7 +363,7 @@ async def generate_presentation(request: FinancialDataRequest):
                 }
                 html_slides.append({
                     'html': generate_statistic_html_with_real_chart(kpi_data),
-                    'has_chart': False,  # no TSX chart data → no canvas to wait for
+                    'has_chart': bool(kpi_chart_data),
                 })
 
                 if slide.root_causes:
@@ -391,7 +402,8 @@ async def generate_presentation(request: FinancialDataRequest):
                         await page.wait_for_timeout(6000)
                         await page.wait_for_selector('canvas', timeout=15000)
                     else:
-                        await page.wait_for_timeout(1000)
+                        # Allow 3.5 s for Tailwind CDN to finish processing after networkidle
+                        await page.wait_for_timeout(3500)
 
                     slide_pdf = os.path.join(temp_dir, f"slide_{i}.pdf")
                     await page.pdf(
@@ -557,7 +569,8 @@ export default BusinessDashboardSlide;'''
                         await page.wait_for_timeout(8000)
                         await page.wait_for_selector('canvas', timeout=20000)
                     else:
-                        await page.wait_for_timeout(1000)
+                        # Allow 3.5 s for Tailwind CDN to finish processing after networkidle
+                        await page.wait_for_timeout(3500)
                     print(f"   🎨 Chart rendering in {time.time() - render_start:.2f}s")
 
                     pdf_start = time.time()
