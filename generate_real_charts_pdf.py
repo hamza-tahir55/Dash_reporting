@@ -149,20 +149,20 @@ def generate_title_html(data):
     if dash_logo:
         # Case 1: Show default DashAnalytix logo
         logo_src = get_logo_base64()  # No URL = default logo
-        logo_wrapper_class = "w-14 h-14 bg-white rounded-2xl shadow-2xl shadow-blue-500/30 p-2 flex items-center justify-center"
-        logo_img_class = "block w-full h-full object-contain"
+        logo_wrapper_style = "width: 56px; height: 56px; background: white; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(59, 130, 246, 0.3); padding: 8px; display: flex; align-items: center; justify-content: center;"
+        logo_img_style = "display: block; width: 100%; height: 100%; object-fit: contain;"
         show_logo = True
     elif custom_logo_provided:
         # Case 2: Show custom logo
         logo_src = get_logo_base64(logo_url)
-        logo_wrapper_class = "w-20 h-20 rounded-full overflow-hidden bg-transparent"
-        logo_img_class = "block w-full h-full object-cover"
+        logo_wrapper_style = "width: 80px; height: 80px; border-radius: 50%; overflow: hidden; background: transparent;"
+        logo_img_style = "display: block; width: 100%; height: 100%; object-fit: cover;"
         show_logo = True
     else:
         # Case 3: No logo at all
         logo_src = ""
-        logo_wrapper_class = ""
-        logo_img_class = ""
+        logo_wrapper_style = ""
+        logo_img_style = ""
         show_logo = False
     
     return f"""<!DOCTYPE html>
@@ -171,124 +171,170 @@ def generate_title_html(data):
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Financial Report</title>
-<script src="https://cdn.tailwindcss.com"></script>
 <style>
+:root {{
+  --bg-gradient: linear-gradient(135deg, #061551 0%, #0a4d8f 50%, #0e68b3 100%);
+  --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+  --white: #ffffff;
+  --blue-100: #dbeafe;
+  --blue-200: #bfdbfe;
+  --blue-300: #93c5fd;
+  --cyan-400: #22d3ee;
+  --cyan-300: #67e8f9;
+}}
 body {{
   margin: 0;
   width: 1280px;
   height: 720px;
   overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: var(--white);
 }}
-.gradient-bg {{
-  background: linear-gradient(135deg, #061551 0%, #0a4d8f 50%, #0e68b3 100%);
+.container {{
+  width: 1280px;
+  height: 720px;
+  background: var(--bg-gradient);
+  position: relative;
+  overflow: hidden;
 }}
-.accent-gradient {{
-  background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+.bg-blob {{
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(64px);
 }}
-.glass-effect {{
+.blob-1 {{
+  top: -10%;
+  right: -5%;
+  width: 500px;
+  height: 500px;
+  background: #60a5fa;
+  opacity: 0.15;
+  animation: pulse-glow 4s ease-in-out infinite;
+}}
+.blob-2 {{
+  bottom: -10%;
+  left: -5%;
+  width: 450px;
+  height: 450px;
+  background: #22d3ee;
+  opacity: 0.15;
+  animation: pulse-glow 4s ease-in-out infinite;
+  animation-delay: 2s;
+}}
+.blob-3 {{
+  top: 30%;
+  right: 10%;
+  width: 300px;
+  height: 300px;
+  background: #3b82f6;
+  opacity: 0.1;
+  animation: float 6s ease-in-out infinite;
+}}
+.geometric {{
+  position: absolute;
+  border: 2px solid;
+  opacity: 0.2;
+}}
+.glass {{
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
+}}
+.badge {{
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 20px;
+  border-radius: 9999px;
 }}
 @keyframes float {{
   0%, 100% {{ transform: translateY(0px) rotate(0deg); }}
   50% {{ transform: translateY(-20px) rotate(5deg); }}
 }}
-.float-animation {{
-  animation: float 6s ease-in-out infinite;
-}}
 @keyframes pulse-glow {{
   0%, 100% {{ opacity: 0.15; }}
   50% {{ opacity: 0.25; }}
 }}
-.pulse-glow {{
-  animation: pulse-glow 4s ease-in-out infinite;
+@keyframes pulse {{
+  0%, 100% {{ opacity: 1; }}
+  50% {{ opacity: 0.5; }}
+}}
+.animate-pulse {{
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }}
 </style>
 </head>
 <body>
-<div class="w-[1280px] h-[720px] gradient-bg relative overflow-hidden">
+<div class="container">
+  <!-- Background Elements -->
+  <div class="bg-blob blob-1"></div>
+  <div class="bg-blob blob-2"></div>
+  <div class="bg-blob blob-3"></div>
   
-  <!-- Animated Background Elements -->
-  <div class="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-blue-400 rounded-full opacity-15 blur-3xl pulse-glow"></div>
-  <div class="absolute bottom-[-10%] left-[-5%] w-[450px] h-[450px] bg-cyan-400 rounded-full opacity-15 blur-3xl pulse-glow" style="animation-delay: 2s;"></div>
-  <div class="absolute top-[30%] right-[10%] w-[300px] h-[300px] bg-blue-500 rounded-full opacity-10 blur-2xl float-animation"></div>
-  
-  <!-- Geometric Accents -->
-  <div class="absolute top-[15%] right-[20%] w-16 h-16 border-2 border-blue-400 opacity-20 rotate-45"></div>
-  <div class="absolute bottom-[25%] left-[15%] w-20 h-20 border-2 border-cyan-400 opacity-20 rotate-12"></div>
+  <div class="geometric" style="top: 15%; right: 20%; width: 64px; height: 64px; border-color: #60a5fa; transform: rotate(45deg);"></div>
+  <div class="geometric" style="bottom: 25%; left: 15%; width: 80px; height: 80px; border-color: #22d3ee; transform: rotate(12deg);"></div>
   
   <!-- Header Bar -->
-  <div class="absolute top-0 left-0 right-0 px-16 py-8 flex justify-between items-center z-20">
-    <div class="flex items-center space-x-4">
-      {f'''<div class="{logo_wrapper_class}">
-        <img src="{logo_src}" 
-             alt="DashAnalytix Logo" 
-             class="{logo_img_class}">
+  <div style="position: absolute; top: 0; left: 0; right: 0; padding: 32px 64px; display: flex; justify-content: space-between; align-items: center; z-index: 20;">
+    <div style="display: flex; align-items: center;">
+      {f'''<div style="{logo_wrapper_style} margin-right: 16px;">
+        <img src="{logo_src}" alt="Logo" style="{logo_img_style}">
       </div>''' if show_logo else ''}
       <div>
-        <div class="text-2xl font-bold text-white tracking-tight">{data.get('company_name', 'DashAnalytix')}</div>
-        <div class="text-xs text-blue-300 font-medium tracking-wider">FINANCIAL INTELLIGENCE</div>
+        <div style="font-size: 24px; font-weight: 700; color: white; letter-spacing: -0.025em;">{data.get('company_name', 'DashAnalytix')}</div>
+        <div style="font-size: 12px; color: var(--blue-300); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase;">FINANCIAL INTELLIGENCE</div>
       </div>
     </div>
-    <div class="glass-effect px-6 py-2 rounded-full">
-      <span class="text-blue-200 font-semibold text-sm">{data.get('org_name', 'ORGANIZATION')}</span>
+    <div class="glass" style="padding: 8px 24px; border-radius: 9999px;">
+      <span style="color: var(--blue-200); font-weight: 600; font-size: 14px;">{data.get('org_name', 'ORGANIZATION')}</span>
     </div>
   </div>
   
-  <!-- Main Content Area -->
-  <div class="relative h-full flex flex-col justify-center px-16 z-10">
-    <div class="max-w-5xl">
-      
-      <!-- Category Badge -->
-      <div class="inline-flex items-center space-x-2 px-5 py-2 glass-effect rounded-full mb-8">
-        <div class="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
-        <span class="text-cyan-300 font-bold text-sm tracking-widest uppercase">Financial Report</span>
+  <!-- Main Content -->
+  <div style="position: relative; height: 100%; display: flex; flex-direction: column; justify-content: center; padding: 0 64px; z-index: 10;">
+    <div style="max-width: 1024px;">
+      <div class="glass badge" style="margin-bottom: 32px;">
+        <div class="animate-pulse" style="width: 8px; height: 8px; background: var(--cyan-400); border-radius: 50%; margin-right: 8px;"></div>
+        <span style="color: var(--cyan-300); font-weight: 700; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase;">Financial Report</span>
       </div>
       
-      <!-- Main Title -->
-      <h1 class="text-7xl font-black text-white leading-[1.1] mb-8 tracking-tight">
+      <h1 style="font-size: 72px; font-weight: 900; color: white; line-height: 1.1; margin: 0 0 32px 0; letter-spacing: -0.025em;">
         {data['title']}
       </h1>
       
-      <!-- Subtitle with Accent Line -->
-      <div class="flex items-center space-x-5 mb-10">
-        <div class="w-1.5 h-16 accent-gradient rounded-full shadow-lg shadow-blue-500/50"></div>
-        <h2 class="text-3xl font-bold text-blue-100 leading-tight">
-          {data['subtitle']}
-        </h2>
+      <div style="display: flex; align-items: center; margin-bottom: 40px;">
+        <div style="width: 6px; height: 64px; background: var(--accent-gradient); border-radius: 9999px; margin-right: 20px; box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.5);"></div>
+        <h2 style="font-size: 30px; font-weight: 700; color: var(--blue-100); line-height: 1.25; margin: 0;">{data['subtitle']}</h2>
       </div>
       
       <!-- Metadata Row -->
-      <div class="flex items-center space-x-10 text-blue-200">
-        <div class="flex items-center space-x-3 glass-effect px-5 py-3 rounded-xl">
-          <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div style="display: flex; align-items: center;">
+        <div class="glass" style="display: flex; align-items: center; padding: 12px 20px; border-radius: 12px; margin-right: 40px;">
+          <svg style="width: 24px; height: 24px; color: var(--cyan-400); margin-right: 12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
           </svg>
           <div>
-            <div class="text-xs text-blue-300 font-medium">Report Date</div>
-            <div class="font-bold text-white">{data.get('date', 'October 2024')}</div>
+            <div style="font-size: 12px; color: var(--blue-300); font-weight: 500;">Report Date</div>
+            <div style="font-weight: 700; color: white;">{data.get('date', 'October 2024')}</div>
           </div>
         </div>
         
-        <div class="flex items-center space-x-3 glass-effect px-5 py-3 rounded-xl">
-          <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="glass" style="display: flex; align-items: center; padding: 12px 20px; border-radius: 12px; margin-right: 40px;">
+          <svg style="width: 24px; height: 24px; color: var(--cyan-400); margin-right: 12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
           </svg>
           <div>
-            <div class="text-xs text-blue-300 font-medium">Document Type</div>
-            <div class="font-bold text-white">{data.get('doc_type', 'Executive Summary')}</div>
+            <div style="font-size: 12px; color: var(--blue-300); font-weight: 500;">Document Type</div>
+            <div style="font-weight: 700; color: white;">{data.get('doc_type', 'Executive Summary')}</div>
           </div>
         </div>
         
-        <div class="flex items-center space-x-3 glass-effect px-5 py-3 rounded-xl">
-          <svg class="w-6 h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="glass" style="display: flex; align-items: center; padding: 12px 20px; border-radius: 12px;">
+          <svg style="width: 24px; height: 24px; color: var(--cyan-400); margin-right: 12px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
           </svg>
           <div>
-            <div class="text-xs text-blue-300 font-medium">Prepared By</div>
-            <div class="font-bold text-white">{data.get('prepared_by', 'Analytics Team')}</div>
+            <div style="font-size: 12px; color: var(--blue-300); font-weight: 500;">Prepared By</div>
+            <div style="font-weight: 700; color: white;">{data.get('prepared_by', 'Analytics Team')}</div>
           </div>
         </div>
       </div>
@@ -296,27 +342,24 @@ body {{
   </div>
   
   <!-- Footer Bar -->
-  <div class="absolute bottom-0 left-0 right-0 px-16 py-6 bg-gradient-to-r from-black/40 via-black/30 to-black/40 backdrop-blur-md border-t border-white/10">
-    <div class="flex justify-between items-center text-blue-100">
-      <div class="flex items-center space-x-12 text-sm">
-        <div class="flex items-center space-x-2">
-          <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-          </svg>
-          <span class="font-semibold">{data.get('email', 'contact@dashanalytix.com')}</span>
-        </div>
-        <div class="flex items-center space-x-2">
-          <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
-          </svg>
-          <span class="font-semibold">{data.get('website', 'www.app.dashanalytix.com')}</span>
-        </div>
+  <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 24px 64px; background: linear-gradient(to right, rgba(0,0,0,0.4), rgba(0,0,0,0.3), rgba(0,0,0,0.4)); backdrop-filter: blur(12px); border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
+    <div style="display: flex; align-items: center; color: var(--blue-100); font-size: 14px;">
+      <div style="display: flex; align-items: center; margin-right: 48px;">
+        <svg style="width: 16px; height: 16px; color: var(--cyan-400); margin-right: 8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+        <span style="font-weight: 600;">{data.get('email', 'contact@dashanalytix.com')}</span>
       </div>
-      <div class="flex items-center space-x-3">
-        <div class="text-sm font-bold"></div>
-        <div class="w-2 h-2 bg-cyan-400 rounded-full"></div>
-        <div class="text-sm opacity-70">Page 1</div>
+      <div style="display: flex; align-items: center;">
+        <svg style="width: 16px; height: 16px; color: var(--cyan-400); margin-right: 8px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/>
+        </svg>
+        <span style="font-weight: 600;">{data.get('website', 'www.app.dashanalytix.com')}</span>
       </div>
+    </div>
+    <div style="display: flex; align-items: center;">
+      <div style="width: 8px; height: 8px; background: var(--cyan-400); border-radius: 50%; margin-right: 12px;"></div>
+      <span style="font-size: 14px; opacity: 0.7; color: white;">Page 1</span>
     </div>
   </div>
 </div>
