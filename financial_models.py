@@ -110,6 +110,7 @@ class SlidePayload(BaseModel):
     title: str
     description: str
     bullet_points: List[str]
+    chart_data: Optional[ChartData] = None
     root_causes: List[RootCauseSlide] = []
 
 

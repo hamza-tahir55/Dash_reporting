@@ -467,15 +467,16 @@ async def generate_pdf_from_slides(request: GeneratePDFRequest) -> str:
     for slide in request.slides:
         rc_with_charts = [rc for rc in slide.root_causes if rc.chart_data is not None]
 
-        if rc_with_charts:
-            # Use first root cause chart on the KPI summary slide
-            first_rc = rc_with_charts[0]
+        # Prefer the slide's own chart_data; fall back to first root cause's chart
+        kpi_chart = slide.chart_data or (rc_with_charts[0].chart_data if rc_with_charts else None)
+
+        if kpi_chart:
             html = _kpi_chart_slide_html(
                 kpi_name=slide.kpi_name,
                 title=slide.title,
                 description=slide.description,
                 bullet_points=slide.bullet_points,
-                chart_data=first_rc.chart_data,
+                chart_data=kpi_chart,
             )
             html_pages.append((html, True))
         else:
