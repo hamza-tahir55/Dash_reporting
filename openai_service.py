@@ -22,12 +22,13 @@ class AIService:
         if self.provider == "openai":
             self.client = OpenAI(api_key=config.get_api_key())
             print(f"🤖 Initialized OpenAI client with model: {self.model}")
-        elif self.provider == "deepseek":
+        elif self.provider in ("deepseek", "groq"):
             self.client = OpenAI(
                 api_key=config.get_api_key(),
                 base_url=config.get_base_url()
             )
-            print(f"🧠 Initialized DeepSeek client with model: {self.model}")
+            icon = "🧠" if self.provider == "deepseek" else "⚡"
+            print(f"{icon} Initialized {self.provider.title()} client with model: {self.model}")
         else:
             raise ValueError(f"Unsupported provider: {self.provider}")
 
