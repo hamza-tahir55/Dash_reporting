@@ -61,6 +61,9 @@ class ChartData(BaseModel):
     labels: List[str]
     values: List[float]
     chart_type: str  # "bar" or "line"
+    cp_values: Optional[List[float]] = None  # comparison period values
+    cp_label: Optional[str] = None           # comparison period label (e.g. "Dec 25")
+    tp_label: Optional[str] = None           # target/selected period label (e.g. "Jan 26")
 
 
 class RootCauseInput(BaseModel):

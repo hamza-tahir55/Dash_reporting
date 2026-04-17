@@ -179,11 +179,16 @@ def _kpi_chart_slide_html(
     labels_json = json.dumps(chart_data.labels)
     values_json = json.dumps(chart_data.values)
     chart_type  = chart_data.chart_type
+    has_comparison = bool(chart_data.cp_values)
 
     # Derive a "latest value" to show prominently on left panel
     latest_val  = chart_data.values[-1] if chart_data.values else 0
     latest_label = chart_data.labels[-1] if chart_data.labels else ""
     latest_fmt  = _fmt_value(latest_val)
+
+    cp_values_json = json.dumps(chart_data.cp_values or [])
+    cp_label_str   = chart_data.cp_label or "Comparison"
+    tp_label_str   = chart_data.tp_label or "Selected"
 
     bullets_html = "".join([
         f'''<div style="display:flex;align-items:start;background:white;border-radius:8px;padding:12px;
@@ -297,35 +302,59 @@ window.addEventListener('load', function() {{
     Chart.register(ChartDataLabels);
     Chart.defaults.font.family = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
 
-    const labels = {labels_json};
-    const values = {values_json};
+    const labels    = {labels_json};
+    const values    = {values_json};
+    const cpValues  = {cp_values_json};
+    const hasComp   = {('true' if has_comparison else 'false')};
+    const cpLabel   = {json.dumps(cp_label_str)};
+    const tpLabel   = {json.dumps(tp_label_str)};
 
-    // Main line/bar chart
+    const fmtVal = function(v) {{
+      if (Math.abs(v) >= 1000000) return '$'+(v/1000000).toFixed(1)+'M';
+      if (Math.abs(v) >= 1000)    return '$'+(v/1000).toFixed(0)+'K';
+      return '$'+v.toLocaleString();
+    }};
+
+    // Main chart — grouped bar when comparison data present, otherwise single series
     const ctx = document.getElementById('myChart').getContext('2d');
-    new Chart(ctx, {{
-      type: '{chart_type}',
-      data: {{
-        labels: labels,
-        datasets: [{{
-          label: '{kpi_name}',
-          data: values,
-          borderColor: '#2563eb',
-          backgroundColor: '{chart_type}' === 'bar' ? '#2563eb' : 'rgba(37,99,235,.1)',
-          borderWidth: 3,
-          pointRadius: 5,
-          pointBackgroundColor: '#2563eb',
-          pointBorderColor: '#fff',
-          pointBorderWidth: 2,
-          tension: 0.4,
-          fill: '{chart_type}' !== 'bar',
-          borderRadius: 4,
-        }}]
+    const mainDatasets = hasComp ? [
+      {{
+        label: cpLabel,
+        data: cpValues,
+        backgroundColor: '#93c5fd',
+        borderRadius: 4,
+        borderSkipped: false,
       }},
+      {{
+        label: tpLabel,
+        data: values,
+        backgroundColor: '#2563eb',
+        borderRadius: 4,
+        borderSkipped: false,
+      }}
+    ] : [{{
+      label: '{kpi_name}',
+      data: values,
+      borderColor: '#2563eb',
+      backgroundColor: '{chart_type}' === 'bar' ? '#2563eb' : 'rgba(37,99,235,.1)',
+      borderWidth: 3,
+      pointRadius: 5,
+      pointBackgroundColor: '#2563eb',
+      pointBorderColor: '#fff',
+      pointBorderWidth: 2,
+      tension: 0.4,
+      fill: '{chart_type}' !== 'bar',
+      borderRadius: 4,
+    }}];
+
+    new Chart(ctx, {{
+      type: hasComp ? 'bar' : '{chart_type}',
+      data: {{ labels: labels, datasets: mainDatasets }},
       options: {{
         responsive: true, maintainAspectRatio: false,
         layout: {{ padding: {{ top: 28, right: 10, bottom: 8, left: 8 }} }},
         plugins: {{
-          legend: {{ display: false }},
+          legend: {{ display: hasComp, position: 'top', labels: {{ font: {{ size: 9 }}, boxWidth: 12 }} }},
           datalabels: {{
             display: true, align: 'top', anchor: 'end', offset: 4,
             color: '#1e40af',
@@ -333,11 +362,7 @@ window.addEventListener('load', function() {{
             borderRadius: 4, borderWidth: 1, borderColor: '#3b82f6',
             padding: 3,
             font: {{ size: 9, weight: '800' }},
-            formatter: function(v) {{
-              if (Math.abs(v) >= 1000000) return '$'+(v/1000000).toFixed(1)+'M';
-              if (Math.abs(v) >= 1000)    return '$'+(v/1000).toFixed(0)+'K';
-              return '$'+v.toLocaleString();
-            }}
+            formatter: fmtVal,
           }},
           tooltip: {{ backgroundColor: 'rgba(15,23,42,.95)', padding: 10, cornerRadius: 8 }}
         }},
@@ -350,14 +375,16 @@ window.addEventListener('load', function() {{
       }}
     }});
 
-    // Secondary bar chart
+    // Secondary bar chart — show comparison side-by-side too, or single series
     const barCtx = document.getElementById('barChart').getContext('2d');
+    const barDatasets = hasComp ? [
+      {{ label: cpLabel, data: cpValues, backgroundColor: '#93c5fd', borderRadius: 4 }},
+      {{ label: tpLabel, data: values,   backgroundColor: {bar_bg},  borderRadius: 4 }}
+    ] : [{{ data: values, backgroundColor: {bar_bg}, borderRadius: 4 }}];
+
     new Chart(barCtx, {{
       type: 'bar',
-      data: {{
-        labels: labels,
-        datasets: [{{ data: values, backgroundColor: {bar_bg}, borderRadius: 4 }}]
-      }},
+      data: {{ labels: labels, datasets: barDatasets }},
       options: {{
         responsive: true, maintainAspectRatio: false,
         plugins: {{ legend: {{ display: false }}, datalabels: {{ display: false }} }},
